@@ -1,0 +1,16 @@
+site_name: FlashFIX Documentation
+nav:
+  - Home: index.md
+  - Building and Testing:
+    - Installation: building-and-testing/installation.md
+    - Benchmarks: building-and-testing/benchmarks.md
+  - API Reference:
+    - Overview: api-reference/overview.md
+    - Serialization: api-reference/serialization.md
+    - Deserialization: api-reference/deserialization.md
+    - Data Structures: api-reference/data-structures.md
+  - Examples: examples.md
+repo_url: https://github.com/Raimo33/FlashFIX
+theme:
+  name: readthedocs
+
