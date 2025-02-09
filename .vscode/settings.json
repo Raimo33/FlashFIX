@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.conf.template": "nginx",
+    "*.sql.template": "sql",
+    "errors.h": "c"
+  }
+}
