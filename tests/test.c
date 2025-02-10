@@ -1,186 +1,145 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   test.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: craimond <claudio.raimondi@pm.me>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/02/10 17:50:26 by craimond          #+#    #+#             */
-/*   Updated: 2025/02/10 18:00:01 by craimond         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+/*================================================================================
 
-#include <flashfix.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
+File: test.c                                                                    
+Creator: Claudio Raimondi                                                       
+Email: claudio.raimondi@pm.me                                                   
 
-#define TEST_BUFFER_SIZE 1024
-#define ASSERT(condition) \
-  do { \
-    if (!(condition)) { \
-      printf("FAIL at %s:%d\n", __FILE__, __LINE__); \
-      return false; \
-    } \
-  } while (0)
+created at: 2025-02-10 20:25:54                                                 
+last edited: 2025-02-10 20:25:54                                                
 
-#define RUN_TEST(test_fn) \
-  do { \
-    printf("Running %-30s", #test_fn); \
-    if (test_fn()) \
-      printf("[OK]\n"); \
-    else \
-      printf("[FAIL]\n"); \
-  } while (0)
+================================================================================*/
 
-typedef struct {
-  fix_message_t message;
-  const char* expected;
-  size_t expected_len;
-  size_t buffer_size;
-  ff_error_t expected_error;
-} test_case_t;
 
-static bool test_standard_message(void);
-static bool test_buffer_too_small(void);
-static bool test_one_field_message(void);
-static bool test_no_error_param(void);
+#include <flashfix/serializer.h>
 
-static void test_serializer(void) {
-  RUN_TEST(test_standard_message);
-  RUN_TEST(test_buffer_too_small);
-  RUN_TEST(test_one_field_message);
-  RUN_TEST(test_no_error_param);
-}
+# define mu_assert(message, test) do { if (!(test)) return message; } while (0)
+# define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
 
-static bool run_serializer_test(const test_case_t *test)
-{
-  char buffer[TEST_BUFFER_SIZE] = {0};
-  ff_error_t error;
-  int32_t ret;
-  
-  const size_t buffer_size = test->buffer_size ? 
-                            test->buffer_size : 
-                            sizeof(buffer);
-  
-  ret = ff_serialize(buffer, buffer_size, &test->message, &error);
-  
-  if (test->expected_error != FF_OK)
-  {
-    ASSERT(ret == 0);
-    ASSERT(error == test->expected_error);
-    return true;
-  }
-  
-  ASSERT(ret == (int32_t)test->expected_len);
-  ASSERT(memcmp(buffer, test->expected, test->expected_len) == 0);
-  ASSERT(error == test->expected_error);
-  
-  return true;
-}
+int tests_run = 0;
 
-static bool test_standard_message(void)
-{
-  const fix_message_t standard_msg = {
-    .fields = {
-      { "35", "D", 2, 1 },
-      { "49", "BROKER", 2, 6 },
-      { "56", "EXCHANGE", 2, 8 },
-      { "34", "1", 2, 1 },
-      { "52", "20250210-15:15:24.000", 2, 23 },
-      { "11", "123456", 2, 6 },
-      { "21", "1", 2, 1 },
-      { "55", "AAPL", 2, 4 },
-      { "40", "2", 2, 1 },
-      { "54", "1", 2, 1 },
-      { "38", "100", 2, 3 },
-    },
-    .n_fields = 11
-  };
-
-  const char expected[] = 
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=EXCHANGE\x01"
-    "34=1\x01"
-    "52=20250210-15:15:24.000\x01"
-    "11=123456\x01"
-    "21=1\x01"
-    "55=AAPL\x01"
-    "40=2\x01"
-    "54=1\x01"
-    "38=100\x01";
-
-  const test_case_t test = {
-    .message = standard_msg,
-    .expected = expected,
-    .expected_len = sizeof(expected) - 1,
-    .expected_error = FF_OK
-  };
-
-  return run_serializer_test(&test);
-}
-
-static bool test_one_field_message(void)
-{
-  const fix_message_t one_field_msg = {
-    .fields = {
-      { "55", "BTCUSDT", 2, 7 }
-    },
-    .n_fields = 1
-  };
-
-  const char expected[] = 
-    "55=BTCUSDT\x01";
-
-  const test_case_t test = {
-    .message = one_field_msg,
-    .expected = expected,
-    .expected_len = sizeof(expected) - 1,
-    .expected_error = FF_OK
-  };
-
-  return run_serializer_test(&test);
-}
-
-static bool test_buffer_too_small(void)
-{
-  const fix_message_t dummy_msg = {
-    .fields = {
-      { "55", "AAPL", 2, 4 }
-    },
-    .n_fields = 1
-  };
-  const test_case_t test = {
-    .message = dummy_msg,
-    .buffer_size = 0,
-    .expected_error = FF_BUFFER_TOO_SMALL
-  };
-  return run_serializer_test(&test);
-}
-
-static bool test_no_error_param(void)
-{
-  char buffer[TEST_BUFFER_SIZE];
-  const fix_message_t dummy_msg = {
-    .fields = {
-      { "55", "AAPL", 2, 4 }
-    },
-    .n_fields = 1
-  };
-  const int32_t ret = ff_serialize(buffer, sizeof(buffer), &dummy_msg, NULL);
-  ASSERT(ret > 0);
-  return true;
-}
+static char *test_serializer_normal_message(void);
 
 int main(void)
 {
-  printf("Running tests...\n");
-  printf("Testing serializer...\n");
-  test_serializer();
-  printf("Testing deserializer...\n");
-  // test_deserializer();
-  printf("Tests completed.\n");
+  char *result = all_tests();
+
+  if (result != 0)
+    printf("%s\n", result);
+  else
+    printf("all tests passed\n");
+
+  printf("Tests run: %d\n", tests_run);
+
+  return result != 0;
+}
+
+static char *all_tests(void)
+{
+  mu_run_test(test_serializer_normal_message);
+  mu_run_test(test_serializer_one_field_message);
+  mu_run_test(test_serializer_buffer_too_small);
+  mu_run_test(test_serializer_no_error_param);
   return 0;
+}
+
+static char *test_serializer_normal_message(void)
+{
+  const fix_message_t message = {
+    .fields = {
+      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 22 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  const char expected_buffer[] = "9=123\x0135=D\x0149=BROKER\x0156=CLIENT\x0134=1\x0152=20250210-18:52:11.000\x0198=0\x01108=30\x01";
+  const uint16_t expected_len = sizeof(expected_buffer) - 1;
+  const ff_error_t expected_error = FF_OK;
+
+  char buffer[sizeof(expected_buffer)];
+  ff_error_t error = FF_OK;
+  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, &error);
+
+  mu_assert("error: serialize normal message: wrong length", len == expected_len);
+  mu_assert("error: serialize normal message: wrong error", error == expected_error);
+  mu_assert("error: serialize normal message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+}
+
+static char *test_serializer_one_field_message(void)
+{
+  const fix_message_t message = {
+    .fields = {
+      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 }
+    },
+    .n_fields = 1
+  };
+  const char expected_buffer[] = "9=123\x01";
+  const uint16_t expected_len = sizeof(expected_buffer) - 1;
+  const ff_error_t expected_error = FF_OK;
+
+  char buffer[sizeof(expected_buffer)];
+  ff_error_t error = FF_OK;
+  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, &error);
+
+  mu_assert("error: serialize one field message: wrong length", len == expected_len);
+  mu_assert("error: serialize one field message: wrong error", error == expected_error);
+  mu_assert("error: serialize one field message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+}
+
+static char *test_serializer_buffer_too_small(void)
+{
+  const fix_message_t message = {
+    .fields = {
+      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 22 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  const char expected_buffer[] = "";
+  const uint16_t expected_len = 0;
+  const ff_error_t expected_error = FF_BUFFER_TOO_SMALL;
+
+  char buffer[sizeof(expected_buffer)] = {0};
+  ff_error_t error = FF_OK;
+  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, &error);
+
+  mu_assert("error: serialize buffer too small: wrong length", len == expected_len);
+  mu_assert("error: serialize buffer too small: wrong error", error == expected_error);
+  mu_assert("error: serialize buffer too small: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+}
+
+static char *test_serializer_no_error_param(void)
+{
+  const fix_message_t message = {
+    .fields = {
+      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 22 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  const char expected_buffer[] = "9=123\x0135=D\x0149=BROKER\x0156=CLIENT\x0134=1\x0152=20250210-18:52:11.000\x0198=0\x01108=30\x01";
+  const uint16_t expected_len = sizeof(expected_buffer) - 1;
+
+  char buffer[sizeof(expected_buffer)];
+  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, NULL);
+
+  mu_assert("error: serialize no error param: wrong length", len == expected_len);
+  mu_assert("error: serialize no error param: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
 }
