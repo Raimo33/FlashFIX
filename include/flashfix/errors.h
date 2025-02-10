@@ -6,7 +6,7 @@
 /*   By: craimond <claudio.raimondi@pm.me>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/09 20:13:31 by craimond          #+#    #+#             */
-/*   Updated: 2025/02/10 13:39:07 by craimond         ###   ########.fr       */
+/*   Updated: 2025/02/10 16:40:56 by craimond         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,6 @@
 typedef enum
 {
   FF_OK,
-  FF_NULL_POINTER,
   FF_INVALID_MESSAGE,
   FF_CONTENT_LENGTH_MISMATCH,
   FF_CHECKSUM_MISMATCH,

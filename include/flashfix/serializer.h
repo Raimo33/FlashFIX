@@ -6,7 +6,7 @@
 /*   By: craimond <claudio.raimondi@pm.me>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/09 18:57:56 by craimond          #+#    #+#             */
-/*   Updated: 2025/02/10 14:53:44 by craimond         ###   ########.fr       */
+/*   Updated: 2025/02/10 17:23:08 by craimond         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,75 @@
 # include "structs.h"
 # include "errors.h"
 
-uint16_t serialize_fix_message(char *restrict buffer, const uint16_t buffer_size, const fix_message_t *restrict message, ff_error_t *restrict error);
-uint16_t finalize_fix_message(char *restrict buffer, const uint16_t buffer_size, const uint16_t len, ff_error_t *restrict error);
+/*
+
+description:
+  - serializes a fix message by concatenating the fields with '=' and '\x01' delimiters
+
+inputs:
+  - the buffer where to store the serialized message
+  - the exact size of the buffer
+  - the message struct containing the fields to serialize
+  - an optional pointer to retrieve error information
+
+outputs:
+  - length of the serialized message
+  - the serialized message in the buffer
+  - the error code if any (unless error is NULL)
+
+undefined behaviour:
+  - buffer is NULL
+  - message is NULL
+  - value_len and tag_len are different from the actual length of the value and tag
+  - n_fields is different from the actual number of fields in the message
+  - non printable characters
+  - buffer size is different from the actual size of the buffer
+  - message with NULL fields
+  - message with empty {} fields array
+  - message with empty "" field strings 
+  - message with value_len == 0 or tag_len == 0
+  - message with n_fields == 0
+
+it doesn't check:
+  - if the message is correct
+  - if there are duplicate tags
+
+it does check:
+  - if the buffer is big enough
+
+*/
+uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const fix_message_t *restrict message, ff_error_t *restrict error);
+
+/*
+
+description:
+  - computes and adds the final beginstring, bodylength and checksum tags to the serialized message
+
+inputs:
+  - the buffer which contains a serialized message minus beginstring, bodylength and checksum
+  - the exact size of the buffer
+  - the length of the serialized message (portion of the buffer that is full)
+  - an optional pointer to retrieve error information
+
+outputs:
+  - the length of the serialized message
+  - the finalized message in the buffer
+  - the error code if any (unless error is NULL)
+
+undefined behaviour:
+  - buffer is NULL
+  - buffer_size is different from the actual size of the buffer
+  - len > buffer_size
+
+it doesn't check:
+  - if beginstring, bodylength and checksum are already present
+  - if the message is correct
+  - if there are duplicate tags
+
+it does check:
+  - if the buffer is big enough
+
+*/
+uint16_t ff_finalize(char *restrict buffer, const uint16_t buffer_size, const uint16_t len, ff_error_t *restrict error);
 
 #endif

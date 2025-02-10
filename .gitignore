@@ -1,5 +1,13 @@
 .vscode/
 *.log
+*.out
+*.a
+*.o
+*.so
+libflashfix.so.*
+test_shared
+test_static
+*.dll
 Makefile
 CMakeFiles/
 CMakeCache.txt

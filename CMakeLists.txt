@@ -58,3 +58,19 @@ install(TARGETS flashfix_shared flashfix_static
 install(FILES ${FLASHFIX_PUBLIC_HEADERS}
   DESTINATION include/flashfix
 )
+
+add_executable(test_static tests/test.c)
+target_link_libraries(test_static flashfix_static)
+
+add_executable(test_shared tests/test.c)
+target_link_libraries(test_shared flashfix_shared)
+
+add_custom_command(
+  OUTPUT tests
+  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_static
+  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_shared
+  DEPENDS test_static test_shared
+  COMMENT "Running tests with both static and shared libraries"
+)
+
+add_custom_target(tests ALL DEPENDS tests)

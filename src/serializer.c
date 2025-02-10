@@ -6,7 +6,7 @@
 /*   By: craimond <claudio.raimondi@pm.me>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/09 19:28:37 by craimond          #+#    #+#             */
-/*   Updated: 2025/02/10 14:58:32 by craimond         ###   ########.fr       */
+/*   Updated: 2025/02/10 16:29:11 by craimond         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,15 +17,17 @@
 static uint8_t ultoa(uint64_t num, char *buffer);
 static bool message_fits_in_buffer(const fix_message_t *restrict message, const uint16_t buffer_size);
 
-uint16_t serialize_fix_message(char *buffer, const uint16_t buffer_size, const fix_message_t *message, ff_error_t *restrict error)
+uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const fix_message_t *message, ff_error_t *restrict error)
 {
-  if (UNLIKELY(!buffer || !message))
-    return (*error = FF_NULL_POINTER, 0);
+  ff_error_t local_error = FF_OK;
 
   const char *buffer_start = buffer;
 
   if (UNLIKELY(!message_fits_in_buffer(message, buffer_size)))
-    return (*error = FF_BUFFER_TOO_SMALL, 0);
+  {
+    local_error = FF_BUFFER_TOO_SMALL;
+    goto error;
+  }
 
   const fix_field_t *fields = message->fields;
   const uint16_t n_fields = message->n_fields;
@@ -42,12 +44,16 @@ uint16_t serialize_fix_message(char *buffer, const uint16_t buffer_size, const f
   }
 
   return buffer - buffer_start;
+
+error:
+  if (error)
+    *error = local_error;
+  return 0;
 }
 
-uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const uint16_t len, ff_error_t *restrict error)
+uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t len, ff_error_t *restrict error)
 {
-  if (UNLIKELY(!buffer))
-    return (*error = FF_NULL_POINTER, 0);
+  ff_error_t local_error = FF_OK;
 
   const char *buffer_start = buffer;
 
@@ -69,11 +75,12 @@ uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const ui
   const uint8_t added_len = begin_string.tag_len + 1 + begin_string.value_len + 1 + body_length.tag_len + 1 + body_length.value_len + 1;
   const uint8_t checksum_len = STR_LEN(FIX_CHECKSUM) + 1 + 3 + 1;
   if (UNLIKELY(len + added_len + checksum_len > buffer_size))
-    return (*error = FF_BUFFER_TOO_SMALL, 0);
+  {
+    local_error = FF_BUFFER_TOO_SMALL;
+    goto error;
+  }
 
   memmove(buffer + added_len, buffer, len);
-
-  ff_error_t local_error = FF_OK;
 
   const fix_message_t message = {
     .fields = {
@@ -82,7 +89,7 @@ uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const ui
     },
     .n_fields = 2
   };
-  buffer += serialize_fix_message(buffer, added_len, &message, &local_error);
+  buffer += ff_serialize(buffer, added_len, &message, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
 
   static const char checksum_table[256][sizeof(uint32_t)] = {
@@ -125,7 +132,9 @@ uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const ui
   return buffer - buffer_start;
 
 error:
-  return (*error = local_error, 0);
+  if (error)
+    *error = local_error;
+  return 0;
 }
 
 //TODO simd, adesso sono accanto le len dei tag e dei valori

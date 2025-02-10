@@ -6,7 +6,7 @@
 /*   By: craimond <claudio.raimondi@pm.me>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/09 19:11:25 by craimond          #+#    #+#             */
-/*   Updated: 2025/02/10 14:57:16 by craimond         ###   ########.fr       */
+/*   Updated: 2025/02/10 17:05:24 by craimond         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_siz
 static void tokenize_message(char *restrict buffer, const uint16_t buffer_size);
 static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error);
 
-bool is_full_fix_message(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
+bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
 {
   static const uint8_t checksum_len = STR_LEN(FIX_CHECKSUM "=000\x01");
   static const uint8_t begin_string_len = STR_LEN(FIX_BEGINSTRING "=" FIX_VERSION "\x01");
@@ -33,20 +33,22 @@ bool is_full_fix_message(const char *buffer, UNUSED const uint16_t buffer_size, 
     return false;
 
   //TODO potenziale loop infinito se content len e' piu grante del buffer_size. fare un assert
+  (void)error;
 
   return (!!get_checksum_start(buffer, message_len));
 }
 
-uint16_t deserialize_fix_message(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error)
+/*
+TODO correctly handle all the possible edge cases coming from the network.
+for example non printable chars, multiple separators adiacent, multiple = adiacent, etc.
+*/
+uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error)
 {
-  if (!buffer || !message)
-    return (*error = FF_NULL_POINTER, 0);
+  ff_error_t local_error = FF_OK;
   
   const char *buffer_start = buffer;
   char *body_start;
   uint16_t content_length;
-
-  ff_error_t local_error = FF_OK;
 
   buffer += check_begin_string(buffer, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
@@ -67,7 +69,9 @@ uint16_t deserialize_fix_message(char *restrict buffer, const uint16_t buffer_si
   return buffer - buffer_start;
 
 error:
-  return (*error = local_error, 0);
+  if (error)
+    *error = local_error;
+  return 0;
 }
 
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
