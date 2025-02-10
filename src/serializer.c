@@ -6,26 +6,31 @@
 /*   By: craimond <claudio.raimondi@pm.me>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/09 19:28:37 by craimond          #+#    #+#             */
-/*   Updated: 2025/02/09 19:38:34 by craimond         ###   ########.fr       */
+/*   Updated: 2025/02/10 14:58:32 by craimond         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "flashfix_serializer.h"
+#include "internal/common.h"
+#include <flashfix/serializer.h>
+#include <string.h>
 
 static uint8_t ultoa(uint64_t num, char *buffer);
+static bool message_fits_in_buffer(const fix_message_t *restrict message, const uint16_t buffer_size);
 
-uint16_t serialize_fix_message(char *buffer, const uint16_t buffer_size, const fix_message_t *message)
+uint16_t serialize_fix_message(char *buffer, const uint16_t buffer_size, const fix_message_t *message, ff_error_t *restrict error)
 {
-  fast_assert(buffer && message, "Unexpected NULL pointer");
+  if (UNLIKELY(!buffer || !message))
+    return (*error = FF_NULL_POINTER, 0);
 
   const char *buffer_start = buffer;
 
-  if (!message_fits_in_buffer(message, buffer_size))
-    panic("FIX message does not fit in buffer");
+  if (UNLIKELY(!message_fits_in_buffer(message, buffer_size)))
+    return (*error = FF_BUFFER_TOO_SMALL, 0);
 
   const fix_field_t *fields = message->fields;
   const uint16_t n_fields = message->n_fields;
-  for (uint8_t i = 0; LIKELY(i < n_fields); i++)
+
+  for (uint16_t i = 0; LIKELY(i < n_fields); i++)
   {
     memcpy(buffer, fields[i].tag, fields[i].tag_len);
     buffer += fields[i].tag_len;
@@ -39,9 +44,11 @@ uint16_t serialize_fix_message(char *buffer, const uint16_t buffer_size, const f
   return buffer - buffer_start;
 }
 
-uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const uint16_t len)
+uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const uint16_t len, ff_error_t *restrict error)
 {
-  fast_assert(buffer, "Unexpected NULL pointer");
+  if (UNLIKELY(!buffer))
+    return (*error = FF_NULL_POINTER, 0);
+
   const char *buffer_start = buffer;
 
   static const fix_field_t begin_string = {
@@ -57,13 +64,16 @@ uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const ui
     .tag_len = STR_LEN(FIX_BODYLENGTH),
     .value = body_length_str,
     .value_len = ultoa(len, body_length_str)
-  }
+  };
 
   const uint8_t added_len = begin_string.tag_len + 1 + begin_string.value_len + 1 + body_length.tag_len + 1 + body_length.value_len + 1;
   const uint8_t checksum_len = STR_LEN(FIX_CHECKSUM) + 1 + 3 + 1;
-  fast_assert(len + added_len + checksum_len <= buffer_size, "FIX message does not fit in buffer");
+  if (UNLIKELY(len + added_len + checksum_len > buffer_size))
+    return (*error = FF_BUFFER_TOO_SMALL, 0);
 
   memmove(buffer + added_len, buffer, len);
+
+  ff_error_t local_error = FF_OK;
 
   const fix_message_t message = {
     .fields = {
@@ -72,7 +82,8 @@ uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const ui
     },
     .n_fields = 2
   };
-  buffer += serialize_fix_message(buffer, added_len, &message);
+  buffer += serialize_fix_message(buffer, added_len, &message, &local_error);
+  if (UNLIKELY(local_error != FF_OK)) goto error;
 
   static const char checksum_table[256][sizeof(uint32_t)] = {
     {"000\x01"}, {"001\x01"}, {"002\x01"}, {"003\x01"}, {"004\x01"}, {"005\x01"}, {"006\x01"}, {"007\x01"}, {"008\x01"}, {"009\x01"},
@@ -105,13 +116,27 @@ uint16_t finalize_fix_message(char *buffer, const uint16_t buffer_size, const ui
 
   const uint8_t checksum = compute_checksum(buffer_start, buffer - buffer_start);
 
-  memcpy(buffer, STR_AND_LEN(FIX_CHECKSUM));
+  memcpy(buffer, FIX_CHECKSUM, STR_LEN(FIX_CHECKSUM));
   buffer += STR_LEN(FIX_CHECKSUM);
   *buffer++ = '=';
   *(uint32_t *)buffer = *(const uint32_t *)checksum_table[checksum];
   buffer += 4;
 
   return buffer - buffer_start;
+
+error:
+  return (*error = local_error, 0);
+}
+
+//TODO simd, adesso sono accanto le len dei tag e dei valori
+static bool message_fits_in_buffer(const fix_message_t *restrict message, const uint16_t buffer_size)
+{
+  uint16_t total_len = (message->n_fields << 1);
+
+  for (uint8_t i = 0; LIKELY(i < message->n_fields); i++)
+    total_len += message->fields[i].tag_len + message->fields[i].value_len;
+
+  return total_len <= buffer_size;
 }
 
 //TODO simd?? swar??
@@ -168,7 +193,7 @@ static uint8_t ultoa(uint64_t num, char *buffer)
   uint64_t power = power10[digits - 1];
   char *p = buffer;
   uint64_t quotient;
-  for (int i = 0; i < digits; i++)
+  for (uint8_t i = 0; i < digits; i++)
   {
     quotient = num / power;
     *p++ = (char)('0' + quotient);

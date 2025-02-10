@@ -1,15 +1,60 @@
 cmake_minimum_required(VERSION 3.10)
+set(CMAKE_C_COMPILER gcc)
+project(flashfix LANGUAGES C VERSION 1.0.0)
 
-project(my_library VERSION 1.0.0 LANGUAGES C)
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 
-add_library(my_library
-  src/common.c
+set(FLASHFIX_VERSION_MAJOR 1)
+set(FLASHFIX_VERSION_MINOR 0)
+set(FLASHFIX_VERSION_PATCH 0)
+set(FLASHFIX_VERSION "${FLASHFIX_VERSION_MAJOR}.${FLASHFIX_VERSION_MINOR}.${FLASHFIX_VERSION_PATCH}")
+
+set(FLASHFIX_SOURCES
   src/deserializer.c
   src/serializer.c
+  src/internal/common.c
 )
 
-target_include_directories(my_library PUBLIC include)
-target_include_directories(my_library PRIVATE src/)
+set(FLASHFIX_PUBLIC_HEADERS
+  include/flashfix/deserializer.h
+  include/flashfix/serializer.h
+)
 
-install(DIRECTORY include/my_library DESTINATION include)
-install(TARGETS my_library DESTINATION lib)
+add_library(flashfix_shared SHARED ${FLASHFIX_SOURCES})
+target_include_directories(flashfix_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_target_properties(flashfix_shared PROPERTIES
+  VERSION ${FLASHFIX_VERSION}
+  SOVERSION ${FLASHFIX_VERSION_MAJOR}
+  OUTPUT_NAME flashfix
+)
+
+add_library(flashfix_static STATIC ${FLASHFIX_SOURCES})
+target_include_directories(flashfix_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_target_properties(flashfix_static PROPERTIES
+  OUTPUT_NAME flashfix
+)
+
+set(CMAKE_CFLAGS "${CMAKE_CFLAGS}"
+  -Wall -Wextra
+  -fwrapv
+  -fno-strict-aliasing
+  -Ofast  
+  -march=native
+  -fno-plt
+  -fno-stack-protector
+  -fno-semantic-interposition
+  -fno-asynchronous-unwind-tables
+  -fomit-frame-pointer
+  -funroll-loops
+)
+
+install(TARGETS flashfix_shared flashfix_static
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
+
+install(FILES ${FLASHFIX_PUBLIC_HEADERS}
+  DESTINATION include/flashfix
+)

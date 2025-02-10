@@ -2,6 +2,9 @@
   "files.associations": {
     "*.conf.template": "nginx",
     "*.sql.template": "sql",
-    "errors.h": "c"
+    "errors.h": "c",
+    "common.h": "c",
+    "internal_errors.h": "c",
+    "deserializer.h": "c"
   }
 }
