@@ -4,20 +4,39 @@ File: test.c
 Creator: Claudio Raimondi                                                       
 Email: claudio.raimondi@pm.me                                                   
 
+created at: 2025-02-10 21:04:36                                                 
+last edited: 2025-02-10 21:04:36                                                
+
+================================================================================*/
+
+/*================================================================================
+
+File: test.c                                                                    
+Creator: Claudio Raimondi                                                       
+Email: claudio.raimondi@pm.me                                                   
+
 created at: 2025-02-10 20:25:54                                                 
 last edited: 2025-02-10 20:25:54                                                
 
 ================================================================================*/
 
-
 #include <flashfix/serializer.h>
+#include <stdio.h>
+#include <string.h>
 
 # define mu_assert(message, test) do { if (!(test)) return message; } while (0)
 # define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
 
 int tests_run = 0;
 
+static char *all_tests(void);
 static char *test_serializer_normal_message(void);
+static char *test_serializer_one_field_message(void);
+static char *test_serializer_buffer_too_small(void);
+static char *test_serializer_no_error_param(void);
+//TODO test finalize
+//TODO test is_full
+//TODO test deserialize
 
 int main(void)
 {
@@ -57,7 +76,15 @@ static char *test_serializer_normal_message(void)
     },
     .n_fields = 8
   };
-  const char expected_buffer[] = "9=123\x0135=D\x0149=BROKER\x0156=CLIENT\x0134=1\x0152=20250210-18:52:11.000\x0198=0\x01108=30\x01";
+  const char expected_buffer[] =
+    "9=123\x01"
+    "35=D\x01"
+    "49=BROKER\x01"
+    "56=CLIENT\x01"
+    "34=1\x01"
+    "52=20250210-18:52:11.000\x01"
+    "98=0\x01"
+    "108=30\x01";
   const uint16_t expected_len = sizeof(expected_buffer) - 1;
   const ff_error_t expected_error = FF_OK;
 
@@ -134,7 +161,15 @@ static char *test_serializer_no_error_param(void)
     },
     .n_fields = 8
   };
-  const char expected_buffer[] = "9=123\x0135=D\x0149=BROKER\x0156=CLIENT\x0134=1\x0152=20250210-18:52:11.000\x0198=0\x01108=30\x01";
+  const char expected_buffer[] =
+    "9=123\x01"
+    "35=D\x01"
+    "49=BROKER\x01"
+    "56=CLIENT\x01"
+    "34=1\x01"
+    "52=20250210-18:52:11.000\x01"
+    "98=0\x01"
+    "108=30\x01";
   const uint16_t expected_len = sizeof(expected_buffer) - 1;
 
   char buffer[sizeof(expected_buffer)];
