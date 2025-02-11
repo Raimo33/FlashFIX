@@ -1,3 +1,14 @@
+/*================================================================================
+
+File: serializer.c                                                              
+Creator: Claudio Raimondi                                                       
+Email: claudio.raimondi@pm.me                                                   
+
+created at: 2025-02-11 12:37:26                                                 
+last edited: 2025-02-11 12:37:26                                                
+
+================================================================================*/
+
 #include "internal/common.h"
 #include <flashfix/serializer.h>
 #include <string.h>
@@ -34,8 +45,7 @@ uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const ff_message
   return buffer - buffer_start;
 
 error:
-  if (error)
-    *error = local_error;
+  (void)(error && (*error = local_error));
   return 0;
 }
 
@@ -77,8 +87,10 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
     },
     .n_fields = 2
   };
-  buffer += ff_serialize(buffer, added_len, &message, &local_error);
+  ff_serialize(buffer, added_len, &message, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
+
+  buffer += added_len + len;
 
   static const char checksum_table[256][sizeof(uint32_t)] = {
     {"000\x01"}, {"001\x01"}, {"002\x01"}, {"003\x01"}, {"004\x01"}, {"005\x01"}, {"006\x01"}, {"007\x01"}, {"008\x01"}, {"009\x01"},
@@ -120,8 +132,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
   return buffer - buffer_start;
 
 error:
-  if (error)
-    *error = local_error;
+  (void)(error && (*error = local_error));
   return 0;
 }
 

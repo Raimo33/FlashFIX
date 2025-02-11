@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-10 21:08:13                                                
+last edited: 2025-02-11 12:37:26                                                
 
 ================================================================================*/
 
@@ -31,20 +31,16 @@ static char *test_is_full_normal_message_negative(void);
 static char *test_is_full_buffer_too_small(void);
 static char *test_is_full_no_error_param(void);
 static char *test_deserialize_normal_message(void);
-static char *test_deserialize_message_too_big(void);
+static char *test_deserialize_buffer_too_small(void);
 static char *test_deserialize_no_error_param(void);
 static char *test_deserialize_adjacent_separators(void);
 static char *test_deserialize_adjacent_equals(void);
 static char *test_deserialize_no_beginstr(void);
 static char *test_deserialize_no_body_length(void);
-static char *test_deserialize_non_printable_chars1(void);
-static char *test_deserialize_non_printable_chars2(void);
 static char *test_deserialize_wrong_beginstr(void);
-static char *test_deserialize_wrong_content_length1(void);
-static char *test_deserialize_wrong_content_length2(void);
+static char *test_deserialize_wrong_body_length1(void);
+static char *test_deserialize_wrong_body_length2(void);
 static char *test_deserialize_checksum_mismatch(void);
-
-//TODO test deserialize
 
 int main(void)
 {
@@ -77,17 +73,15 @@ static char *all_tests(void)
   mu_run_test(test_is_full_no_error_param);
 
   mu_run_test(test_deserialize_normal_message);
-  mu_run_test(test_deserialize_message_too_big);
+  mu_run_test(test_deserialize_buffer_too_small);
   mu_run_test(test_deserialize_no_error_param);
   mu_run_test(test_deserialize_adjacent_separators);
   mu_run_test(test_deserialize_adjacent_equals);
   mu_run_test(test_deserialize_no_beginstr);
   mu_run_test(test_deserialize_no_body_length);
-  mu_run_test(test_deserialize_non_printable_chars1);
-  mu_run_test(test_deserialize_non_printable_chars2);
   mu_run_test(test_deserialize_wrong_beginstr);
-  mu_run_test(test_deserialize_wrong_content_length1);
-  mu_run_test(test_deserialize_wrong_content_length2);
+  mu_run_test(test_deserialize_wrong_body_length1);
+  mu_run_test(test_deserialize_wrong_body_length2);
   mu_run_test(test_deserialize_checksum_mismatch);
 
   return 0;
@@ -263,7 +257,7 @@ static char *test_finalize_buffer_too_small(void)
     "98=0\x01"
     "108=30\x01"
     "10=120\x01";
-  char buffer[sizeof(expected_buffer) - 1] =
+  char buffer[sizeof(expected_buffer) - 2] =
     "35=D\x01"
     "49=BROKER\x01"
     "56=CLIENT\x01"
@@ -275,7 +269,7 @@ static char *test_finalize_buffer_too_small(void)
   const ff_error_t expected_error = FF_BUFFER_TOO_SMALL;
 
   ff_error_t error = FF_OK;
-  uint16_t len = ff_finalize(buffer, sizeof(buffer), strlen(buffer), &error); 
+  uint16_t len = ff_finalize(buffer, sizeof(buffer), strlen(buffer), &error);
 
   mu_assert("error: finalize buffer too small: wrong length", len == expected_len);
   mu_assert("error: finalize buffer too small: wrong error", error == expected_error);
@@ -334,8 +328,8 @@ static char *test_is_full_normal_message_positive(void)
   ff_error_t error = FF_OK;
   bool is_full = ff_is_full(buffer, sizeof(buffer), len, &error);
 
-  mu_assert("error: is_full normal message: wrong error", error == expected_error);
-  mu_assert("error: is_full normal message: wrong is_full", is_full == true);
+  mu_assert("error: is_full normal message positive: wrong error", error == expected_error);
+  mu_assert("error: is_full normal message positive: wrong is_full", is_full == true);
 
   return 0;
 }
@@ -370,8 +364,8 @@ static char *test_is_full_normal_message_negative(void)
   ff_error_t error = FF_OK;
   bool is_full = ff_is_full(buffer, sizeof(buffer), len, &error);
 
-  mu_assert("error: is_full normal message: wrong error", error == expected_error);
-  mu_assert("error: is_full normal message: wrong is_full", is_full == false);
+  mu_assert("error: is_full normal message negative: wrong error", error == expected_error);
+  mu_assert("error: is_full normal message negative: wrong is_full", is_full == false);
 
   return 0;
 }
@@ -390,11 +384,12 @@ static char *test_is_full_buffer_too_small(void)
     "108=30\x01"
     "10=120";
   const uint16_t len = sizeof(buffer) - 1;
+  const uint16_t simulated_buffer_size = sizeof(buffer) - 1;
 
   const ff_error_t expected_error = FF_BUFFER_TOO_SMALL;
 
   ff_error_t error = FF_OK;
-  bool is_full = ff_is_full(buffer, sizeof(buffer), len, &error);
+  bool is_full = ff_is_full(buffer, simulated_buffer_size, len, &error);
 
   mu_assert("error: is_full buffer too small: wrong error", error == expected_error);
   mu_assert("error: is_full buffer too small: wrong is_full", is_full == false);
@@ -419,7 +414,7 @@ static char *test_is_full_no_error_param(void)
 
   bool is_full = ff_is_full(buffer, sizeof(buffer), len, NULL);
 
-  mu_assert("error: is_full normal message: wrong is_full", is_full == true);
+  mu_assert("error: is_full no error param: wrong is_full", is_full == true);
 
   return 0;
 }
@@ -463,7 +458,7 @@ static char *test_deserialize_normal_message(void)
   return 0;
 }
 
-static char *test_deserialize_message_too_big(void)
+static char *test_deserialize_buffer_too_small(void)
 {
   _Static_assert(FIX_MAX_FIELDS == 64, "FIX_MAX_FIELDS must be 64 for this test to work");
 
@@ -696,64 +691,6 @@ static char *test_deserialize_no_body_length(void)
   return 0;
 }
 
-static char *test_deserialize_non_printable_chars1(void)
-{
-  char buffer[] = 
-    "\0"
-    "8=FIX.4.4\x01"
-    "9=67\x01"
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01"
-    "10=120\x01";
-  const ff_message_t expected_message = {0};
-  const uint16_t expected_len = 0;
-  const ff_error_t expected_error = FF_INVALID_MESSAGE;
-
-  ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
-
-  mu_assert("error: deserialize non printable chars: wrong length", len == expected_len);
-  mu_assert("error: deserialize non printable chars: wrong error", error == expected_error);
-  mu_assert("error: deserialize non printable chars: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
-
-  return 0;
-}
-
-static char *test_deserialize_non_printable_chars2(void)
-{
-  char buffer[] = 
-    "\127"
-    "8=FIX.4.4\x01"
-    "9=67\x01"
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01"
-    "10=247\x01";
-  const ff_message_t expected_message = {0};
-  const uint16_t expected_len = 0;
-  const ff_error_t expected_error = FF_INVALID_MESSAGE;
-
-  ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
-
-  mu_assert("error: deserialize non printable chars: wrong length", len == expected_len);
-  mu_assert("error: deserialize non printable chars: wrong error", error == expected_error);
-  mu_assert("error: deserialize non printable chars: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
-
-  return 0;
-}
-
 static char *test_deserialize_wrong_beginstr(void)
 {
   char buffer[] = 
@@ -782,7 +719,7 @@ static char *test_deserialize_wrong_beginstr(void)
   return 0;
 }
 
-static char *test_deserialize_wrong_content_length1(void)
+static char *test_deserialize_wrong_body_length1(void)
 {
   char buffer[] = 
     "8=FIX.4.4\x01"
@@ -797,20 +734,20 @@ static char *test_deserialize_wrong_content_length1(void)
     "10=121\x01";
   const ff_message_t expected_message = {0};
   const uint16_t expected_len = 0;
-  const ff_error_t expected_error = FF_CONTENT_LENGTH_MISMATCH; //TODO is it called body size? standard name?
+  const ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH; //TODO is it called body size? standard name?
 
   ff_message_t message;
   ff_error_t error = FF_OK;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
 
-  mu_assert("error: deserialize wrong bodylength: wrong length", len == expected_len);
-  mu_assert("error: deserialize wrong bodylength: wrong error", error == expected_error);
-  mu_assert("error: deserialize wrong bodylength: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize wrong bodylength 1: wrong length", len == expected_len);
+  mu_assert("error: deserialize wrong bodylength 1: wrong error", error == expected_error);
+  mu_assert("error: deserialize wrong bodylength 1: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
 
   return 0;
 }
 
-static char *test_deserialize_wrong_content_length2(void)
+static char *test_deserialize_wrong_body_length2(void)
 {
   char buffer[] = 
     "8=FIX.4.4\x01"
@@ -825,15 +762,15 @@ static char *test_deserialize_wrong_content_length2(void)
     "10=119\x01";
   const ff_message_t expected_message = {0};
   const uint16_t expected_len = 0;
-  const ff_error_t expected_error = FF_CONTENT_LENGTH_MISMATCH; //TODO is it called body size? standard name?
+  const ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH; //TODO is it called body size? standard name?
 
   ff_message_t message;
   ff_error_t error = FF_OK;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
 
-  mu_assert("error: deserialize wrong bodylength: wrong length", len == expected_len);
-  mu_assert("error: deserialize wrong bodylength: wrong error", error == expected_error);
-  mu_assert("error: deserialize wrong bodylength: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize wrong bodylength 2: wrong length", len == expected_len);
+  mu_assert("error: deserialize wrong bodylength 2: wrong error", error == expected_error);
+  mu_assert("error: deserialize wrong bodylength 2: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
 
   return 0;
 }

@@ -1,3 +1,14 @@
+/*================================================================================
+
+File: deserializer.h                                                            
+Creator: Claudio Raimondi                                                       
+Email: claudio.raimondi@pm.me                                                   
+
+created at: 2025-02-11 12:37:26                                                 
+last edited: 2025-02-11 12:37:26                                                
+
+================================================================================*/
+
 #ifndef FLASHFIX_DESERIALIZER_H
 # define FLASHFIX_DESERIALIZER_H
 
@@ -11,6 +22,12 @@
 
 description:
   - checks if the buffer contains a full FIX message (aka full checksum is present) 
+  very important: if
+  the buffer is too small (aka the partial message that arrived has filled the whole buffer)
+  there is potential for an infinite loop if you keep repeating the call to ff_is_full
+  with the same buffer and buffer_size, the function will yield a FF_BUFFER_TOO_SMALL error
+  in that case, you should only avoid ff_is_full with a NULL error pointer if you have
+  other ways to detect that the buffer is full
 
 inputs:
   - the buffer which contains a full or partial serialized message
@@ -25,7 +42,8 @@ outputs:
 undefined behaviour:
   - buffer is NULL
   - buffer_size is different from the actual size of the buffer
-  - message_len is different from the actual length of the message  
+  - message_len is different from the actual length of the message
+  - message_len is bigger than buffer_size
 
 it doesn't check:
   - if the message is correct
@@ -69,10 +87,10 @@ it doesn't check:
   - if there are duplicate tags
   - if tags are in the correct order
   - if tags are part of the FIX standard 
+  - if there are non printable characters
 
 it does check:
   - the presence and correctness of the beginstring, bodylength tags
-  - if there are non printable characters
   - if the buffer is too small
   - if there are adjacent separators '|' or '='
 

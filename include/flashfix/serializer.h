@@ -1,3 +1,14 @@
+/*================================================================================
+
+File: serializer.h                                                              
+Creator: Claudio Raimondi                                                       
+Email: claudio.raimondi@pm.me                                                   
+
+created at: 2025-02-11 12:37:26                                                 
+last edited: 2025-02-11 12:37:26                                                
+
+================================================================================*/
+
 #ifndef FLASHFIX_SERIALIZER_H
 # define FLASHFIX_SERIALIZER_H
 
@@ -39,6 +50,7 @@ undefined behaviour:
 it doesn't check:
   - if the message is correct
   - if there are duplicate tags
+  - if the output buffer will be null terminated
 
 it does check:
   - if the buffer is big enough
