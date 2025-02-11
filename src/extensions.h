@@ -1,3 +1,14 @@
+/*================================================================================
+
+File: extensions.h                                                              
+Creator: Claudio Raimondi                                                       
+Email: claudio.raimondi@pm.me                                                   
+
+created at: 2025-02-11 14:56:11                                                 
+last edited: 2025-02-11 14:56:11                                                
+
+================================================================================*/
+
 #ifndef EXTENSIONS_H
 # define EXTENSIONS_H
 
@@ -21,5 +32,7 @@
 # define FLATTEN                    __attribute__((flatten))
 # define MALLOC                     __attribute__((malloc))
 # define NONNULL(...)               __attribute__((nonnull(__VA_ARGS__)))
+# define INTERNAL                   __attribute__((visibility("hidden")))
+# define CONSTRUCTOR                __attribute__((constructor))
 
 #endif

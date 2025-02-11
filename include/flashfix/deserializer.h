@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-11 12:37:26                                                
+last edited: 2025-02-11 14:56:11                                                
 
 ================================================================================*/
 
@@ -18,7 +18,7 @@ last edited: 2025-02-11 12:37:26
 # include "structs.h"
 # include "errors.h"
 
-/***********************************************************************************************
+/*
 
 description:
   - checks if the buffer contains a full FIX message (aka full checksum is present) 
@@ -55,10 +55,10 @@ it doesn't check:
 it does check:
   - the presence of the full checksum tag ("10=XXX|")
 
-***********************************************************************************************/
+*/
 bool ff_is_full(const char *restrict buffer, const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error);
 
-/***********************************************************************************************
+/*
 
 description:
   - deserializes a fix message by tokenizing the buffer in place:
@@ -94,7 +94,7 @@ it does check:
   - if the buffer is too small
   - if there are adjacent separators '|' or '='
 
-***********************************************************************************************/
+*/
 uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
 
 #endif

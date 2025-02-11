@@ -5,22 +5,69 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-11 12:37:26                                                
+last edited: 2025-02-11 14:56:11                                                
 
 ================================================================================*/
 
-#include "internal/common.h"
+#include "common.h"
 #include <flashfix/deserializer.h>
 #include <string.h>
 
+static uint8_t str_to_uint8(const char *str, const char **endptr);
+static uint16_t str_to_uint16(const char *str, const char **endptr);
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
-HOT ALWAYS_INLINE static inline bool is_checksum_sequence(const char *buffer);
 static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *body_length, ff_error_t *restrict error);
 static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_size, const uint16_t body_length, char **body_start, ff_error_t *restrict error);
 static void tokenize_message(char *restrict buffer, const uint16_t buffer_size);
 static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
+
+//TODO find a way to make them const, forcing prevention of thread safety issues, constexpr??
+#ifdef __AVX512F__
+  static __m512i _512_vec_ones;
+  static __m512i _512_vec_zeros;
+  static __m512i _512_vec_equals; 
+  static __m512i _512_vec_soh;
+#endif
+
+#ifdef __AVX2__
+  static __m256i _256_vec_ones;
+  static __m256i _256_vec_zeros;
+  static __m256i _256_vec_equals;
+  static __m256i _256_vec_soh;
+#endif
+
+#ifdef __SSE2__
+  static __m128i _128_vec_ones;
+  static __m128i _128_vec_zeros;
+  static __m128i _128_vec_equals;
+  static __m128i _128_vec_soh;
+#endif
+
+CONSTRUCTOR void ff_deserializer_init(void)
+{
+#ifdef __AVX512F__
+  _512_vec_ones   = _mm512_set1_epi8('1');
+  _512_vec_zeros  = _mm512_set1_epi8('0');
+  _512_vec_equals = _mm512_set1_epi8('=');
+  _512_vec_soh    = _mm512_set1_epi8('\x01');
+#endif
+
+#ifdef __AVX2__
+  _256_vec_ones   = _mm256_set1_epi8('1');
+  _256_vec_zeros  = _mm256_set1_epi8('0');
+  _256_vec_equals = _mm256_set1_epi8('=');
+  _256_vec_soh    = _mm256_set1_epi8('\x01');
+#endif
+
+#ifdef __SSE2__
+  _128_vec_ones   = _mm_set1_epi8('1');
+  _128_vec_zeros  = _mm_set1_epi8('0');
+  _128_vec_equals = _mm_set1_epi8('=');
+  _128_vec_soh    = _mm_set1_epi8('\x01');
+#endif
+}
 
 bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
 {
@@ -63,6 +110,7 @@ uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_me
   if (UNLIKELY(local_error != FF_OK)) goto error;
 
   tokenize_message(body_start, body_length);
+
   fill_message_fields(body_start, body_length, message, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
 
@@ -79,22 +127,16 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
 #ifdef __AVX512F__
   {
-    //TODO load only once, static
-    const __mm512i vec_ones   = _mm512_set1_epi8('1');
-    const __mm512i vec_zeros  = _mm512_set1_epi8('0');
-    const __mm512i vec_equals = _mm512_set1_epi8('=');
-    const __mm512i vec_soh    = _mm512_set1_epi8('\x01');
-
     while (UNLIKELY(buffer + 64 <= end))
     {
       PREFETCHR(buffer + 128, 3);
 
       const __m512i chunk = _mm512_loadu_si512((const void*)(buffer));
 
-      const __mmask64 m1 = _mm512_cmpeq_epi8_mask(chunk, vec_ones);
-      const __mmask64 m2 = _mm512_cmpeq_epi8_mask(chunk, vec_zeros);
-      const __mmask64 m3 = _mm512_cmpeq_epi8_mask(chunk, vec_equals);
-      const __mmask64 m4 = _mm512_cmpeq_epi8_mask(chunk, vec_soh);
+      const __mmask64 m1 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_ones);
+      const __mmask64 m2 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_zeros);
+      const __mmask64 m3 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_equals);
+      const __mmask64 m4 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_soh);
 
       __mmask64 candidates = _kand_mask64(m1, _kshiftri_mask64(m2, 1));
       candidates = _kand_mask64(candidates, _kshiftri_mask64(m3, 2));
@@ -110,22 +152,16 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
 #ifdef __AVX2__
   {
-    //TODO load only once, static
-    const __m256i vec_ones   = _mm256_set1_epi8('1');
-    const __m256i vec_zeros  = _mm256_set1_epi8('0');
-    const __m256i vec_equals = _mm256_set1_epi8('=');
-    const __m256i vec_soh    = _mm256_set1_epi8('\x01');
-
     while (UNLIKELY(buffer + 32 <= end))
     {
       PREFETCHR(buffer + 64, 3);
   
       const __m256i chunk = _mm256_loadu_si256((const void*)(buffer));
   
-      const __m256i m1 = _mm256_cmpeq_epi8(chunk, vec_ones);
-      const __m256i m2 = _mm256_cmpeq_epi8(chunk, vec_zeros);
-      const __m256i m3 = _mm256_cmpeq_epi8(chunk, vec_equals);
-      const __m256i m4 = _mm256_cmpeq_epi8(chunk, vec_soh);
+      const __m256i m1 = _mm256_cmpeq_epi8(chunk, _256_vec_ones);
+      const __m256i m2 = _mm256_cmpeq_epi8(chunk, _256_vec_zeros);
+      const __m256i m3 = _mm256_cmpeq_epi8(chunk, _256_vec_equals);
+      const __m256i m4 = _mm256_cmpeq_epi8(chunk, _256_vec_soh);
   
       const __m256i shifted_m2 = _mm256_srli_epi64(m2, 1);
       const __m256i shifted_m3 = _mm256_srli_epi64(m3, 2);
@@ -135,7 +171,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
       candidates = _mm256_and_si256(candidates, shifted_m3);
       candidates = _mm256_and_si256(candidates, shifted_m4);
   
-      int mask = _mm256_movemask_epi8(candidates);
+      const int32_t mask = _mm256_movemask_epi8(candidates);
       if (mask)
         return buffer + __builtin_ctz(mask);
   
@@ -145,22 +181,16 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 #endif
 
 #ifdef __SSE2__
-  //TODO load only once, static
-  const __m128i vec_oness  = _mm_set1_epi8('1');
-  const __m128i vec_zeros  = _mm_set1_epi8('0');
-  const __m128i vec_equals = _mm_set1_epi8('=');
-  const __m128i vec_soh    = _mm_set1_epi8('\x01');
-
   while (UNLIKELY(buffer + 16 <= end))
   {
     PREFETCHR(buffer + 32, 3);
 
     const __m128i chunk = _mm_loadu_si128((const __m128i*)(buffer));
 
-    const __m128i m1 = _mm_cmpeq_epi8(chunk, vec_oness);
-    const __m128i m2 = _mm_cmpeq_epi8(chunk, vec_zeros);
-    const __m128i m3 = _mm_cmpeq_epi8(chunk, vec_equals);
-    const __m128i m4 = _mm_cmpeq_epi8(chunk, vec_soh);
+    const __m128i m1 = _mm_cmpeq_epi8(chunk, _128_vec_ones);
+    const __m128i m2 = _mm_cmpeq_epi8(chunk, _128_vec_zeros);
+    const __m128i m3 = _mm_cmpeq_epi8(chunk, _128_vec_equals);
+    const __m128i m4 = _mm_cmpeq_epi8(chunk, _128_vec_soh);
 
     const __m128i shifted_m2 = _mm_srli_epi64(m2, 1);
     const __m128i shifted_m3 = _mm_srli_epi64(m3, 2);
@@ -213,7 +243,7 @@ static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *bod
 {
   const char *buffer_start = buffer;
 
-  *body_length = (uint16_t)strtoul(buffer, (char **)&buffer, 10); //TODO custom strtouint16?, non-printable safe
+  *body_length = str_to_uint16(buffer, (const char **)&buffer);
   *error = FF_INVALID_MESSAGE * (*buffer++ != '\x01');
 
   return buffer - buffer_start;
@@ -229,7 +259,7 @@ static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_siz
     return (*error = FF_BODY_LENGTH_MISMATCH, 0);
 
   const uint8_t expected_checksum = compute_checksum(*body_start, body_length);
-  const uint8_t provided_checksum = (uint8_t)strtoul(checksum_start, (char **)&buffer, 10); //TODO custom strtouint8?, non-printable safe
+  const uint8_t provided_checksum = str_to_uint8(checksum_start, (const char **)&buffer);
   if (UNLIKELY(expected_checksum != provided_checksum))
     return (*error = FF_CHECKSUM_MISMATCH, 0);
   buffer += STR_LEN("\x01");
@@ -243,17 +273,14 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
 
 #ifdef __AVX512F__
   {
-    const __m512i vec_soh    = _mm512_set1_epi8('\x01');
-    const __m512i vec_equals = _mm512_set1_epi8('=');
-
     while (LIKELY(buffer + 64 <= end))
     {
       PREFETCHR(buffer + 128, 3);
     
       const __m512i chunk = _mm512_loadu_si512((__m512i*)buffer);
 
-      const __m512i cmp_soh     = _mm512_cmpeq_epi8(chunk, vec_soh);
-      const __m512i cmp_equals  = _mm512_cmpeq_epi8(chunk, vec_equals);
+      const __m512i cmp_soh     = _mm512_cmpeq_epi8(chunk, _512_vec_soh);
+      const __m512i cmp_equals  = _mm512_cmpeq_epi8(chunk, _512_vec_equals);
   
       const __m512i cmp  = _mm512_or_si512(cmp_soh, cmp_equals);
       const __m512i result = _mm512_andnot_si512(cmp, chunk);
@@ -267,17 +294,14 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
 //TODO intialize these constant simd variables only once, static with the first call (EVERYWHERE in the project, not just here)
 #ifdef __AVX2__
   {
-    const __m256i vec_soh    = _mm256_set1_epi8('\x01');
-    const __m256i vec_equals = _mm256_set1_epi8('=');
-
     while (LIKELY(buffer + 32 <= end))
     {
       PREFETCHR(buffer + 64, 3);
     
       const __m256i chunk = _mm256_loadu_si256((__m256i*)buffer);
 
-      const __m256i cmp_soh     = _mm256_cmpeq_epi8(chunk, vec_soh);
-      const __m256i cmp_equals  = _mm256_cmpeq_epi8(chunk, vec_equals);
+      const __m256i cmp_soh     = _mm256_cmpeq_epi8(chunk, _256_vec_soh);
+      const __m256i cmp_equals  = _mm256_cmpeq_epi8(chunk, _256_vec_equals);
 
       const __m256i cmp = _mm256_or_si256(cmp_soh, cmp_equals);
       const __m256i result = _mm256_andnot_si256(cmp, chunk);
@@ -329,6 +353,47 @@ static void fill_message_fields(char *restrict buffer, const uint16_t buffer_siz
   (void)buffer_size;
   (void)message;
   (void)error;
+}
+
+//TODO optimize
+static uint8_t str_to_uint8(const char *str, const char **endptr)
+{
+  uint8_t result = 0;
+  
+  while (UNLIKELY(*str == ' '))
+    str++;
+
+  while (UNLIKELY(*str == '0'))
+    str++;
+
+  while (LIKELY(*str >= '0' && *str <= '9'))
+  {
+    result = result * 10 + (*str - '0');
+    str++;
+  }
+
+  *endptr = str;
+  return result;
+}
+
+static uint16_t str_to_uint16(const char *str, const char **endptr)
+{
+  uint16_t result = 0;
+  
+  while (UNLIKELY(*str == ' '))
+    str++;
+
+  while (UNLIKELY(*str == '0'))
+    str++;
+
+  while (LIKELY(*str >= '0' && *str <= '9'))
+  {
+    result = result * 10 + (*str - '0');
+    str++;
+  }
+
+  *endptr = str;
+  return result;
 }
 
 

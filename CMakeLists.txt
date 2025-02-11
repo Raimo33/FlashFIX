@@ -14,10 +14,11 @@ set(FLASHFIX_VERSION "${FLASHFIX_VERSION_MAJOR}.${FLASHFIX_VERSION_MINOR}.${FLAS
 set(FLASHFIX_SOURCES
   src/deserializer.c
   src/serializer.c
-  src/internal/common.c
+  src/common.c
 )
 
 set(FLASHFIX_PUBLIC_HEADERS
+  include/flashfix.h
   include/flashfix/deserializer.h
   include/flashfix/serializer.h
 )

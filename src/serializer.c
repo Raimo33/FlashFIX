@@ -5,16 +5,43 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-11 12:37:26                                                
+last edited: 2025-02-11 14:56:11                                                
 
 ================================================================================*/
 
-#include "internal/common.h"
+#include "common.h"
 #include <flashfix/serializer.h>
 #include <string.h>
 
 static uint8_t ultoa(uint64_t num, char *buffer);
 static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size);
+
+#ifdef __AVX512F__
+  //TODO declare the AVX512F vars
+#endif
+
+#ifdef __AVX2__
+  //TODO declare the AVX2 vars
+#endif
+
+#ifdef __SSE2__
+  //TODO declare the SSE2 vars
+#endif
+
+CONSTRUCTOR void ff_serializer_init(void)
+{
+#ifdef __AVX512F__
+  //TODO init the AVX512F vars
+#endif
+
+#ifdef __AVX2__
+  //TODO init the AVX2 vars
+#endif
+
+#ifdef __SSE2__
+  //TODO init the SSE2 vars
+#endif
+}
 
 uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const ff_message_t *message, ff_error_t *restrict error)
 {
