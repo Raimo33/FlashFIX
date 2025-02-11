@@ -44,12 +44,12 @@ it does check:
   - if the buffer is big enough
 
 */
-uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const fix_message_t *restrict message, ff_error_t *restrict error);
+uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const ff_message_t *restrict message, ff_error_t *restrict error);
 
 /*
 
 description:
-  - computes and adds the final beginstring, bodylength and checksum tags to the serialized message
+  - computes and adds the final beginstring, bodylength and checksum tags to the serialized message in place
 
 inputs:
   - the buffer which contains a serialized message minus beginstring, bodylength and checksum

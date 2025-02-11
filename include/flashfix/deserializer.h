@@ -43,10 +43,12 @@ bool ff_is_full(const char *restrict buffer, const uint16_t buffer_size, const u
 /***********************************************************************************************
 
 description:
-  - deserializes a fix message by splitting the fields with '=' and '\x01' delimiters
+  - deserializes a fix message by tokenizing the buffer in place:
+    replacing '=' and '\x01' delimiters with '\0' and store pointers
+    to the beginning of each field in the message struct
 
 inputs:
-  - the buffer which contains the serialized message (comprehensive of beginstring, bodylength and checksum)
+  - the buffer which contains the full serialized message
   - the exact size of the buffer
   - the message struct where to store the deserialized fields
   - an optional pointer to retrieve error information
@@ -61,6 +63,7 @@ undefined behaviour:
   - message is NULL
   - buffer_size is different from the actual size of the buffer
   - buffer does not contain the full message
+  - message is not full (missing checksum)
 
 it doesn't check:
   - if there are duplicate tags
@@ -68,12 +71,12 @@ it doesn't check:
   - if tags are part of the FIX standard 
 
 it does check:
-  - the presence and correctness of the beginstring, bodylength and checksum tags
+  - the presence and correctness of the beginstring, bodylength tags
   - if there are non printable characters
   - if the buffer is too small
-  - if there are adiacent separators '|' or '='
+  - if there are adjacent separators '|' or '='
 
 ***********************************************************************************************/
-uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error);
+uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
 
 #endif

@@ -3,9 +3,9 @@
 #include <string.h>
 
 static uint8_t ultoa(uint64_t num, char *buffer);
-static bool message_fits_in_buffer(const fix_message_t *restrict message, const uint16_t buffer_size);
+static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size);
 
-uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const fix_message_t *message, ff_error_t *restrict error)
+uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const ff_message_t *message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
 
@@ -17,7 +17,7 @@ uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const fix_messag
     goto error;
   }
 
-  const fix_field_t *fields = message->fields;
+  const ff_field_t *fields = message->fields;
   const uint16_t n_fields = message->n_fields;
 
   for (uint16_t i = 0; LIKELY(i < n_fields); i++)
@@ -45,7 +45,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
 
   const char *buffer_start = buffer;
 
-  static const fix_field_t begin_string = {
+  static const ff_field_t begin_string = {
     .tag = FIX_BEGINSTRING,
     .tag_len = STR_LEN(FIX_BEGINSTRING),
     .value = FIX_VERSION,
@@ -53,7 +53,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
   };
 
   char body_length_str[16];
-  const fix_field_t body_length = {
+  const ff_field_t body_length = {
     .tag = FIX_BODYLENGTH,
     .tag_len = STR_LEN(FIX_BODYLENGTH),
     .value = body_length_str,
@@ -70,7 +70,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
 
   memmove(buffer + added_len, buffer, len);
 
-  const fix_message_t message = {
+  const ff_message_t message = {
     .fields = {
       begin_string,
       body_length
@@ -126,7 +126,7 @@ error:
 }
 
 //TODO simd, adesso sono accanto le len dei tag e dei valori
-static bool message_fits_in_buffer(const fix_message_t *restrict message, const uint16_t buffer_size)
+static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size)
 {
   uint16_t total_len = (message->n_fields << 1);
 

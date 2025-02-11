@@ -9,7 +9,7 @@ static inline uint16_t check_content_length_tag(const char *buffer, ff_error_t *
 static inline uint16_t deserialize_content_length(const char *buffer, uint16_t *content_length, ff_error_t *restrict error);
 static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_size, const uint16_t content_length, char **body_start, ff_error_t *restrict error);
 static void tokenize_message(char *restrict buffer, const uint16_t buffer_size);
-static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error);
+static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
 
 bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
 {
@@ -28,15 +28,17 @@ bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uin
 
 /*
 TODO correctly handle all the possible edge cases coming from the network.
-for example non printable chars, multiple separators adiacent, multiple = adiacent, etc.
+for example non printable chars, multiple separators adjacent, multiple = adjacent, etc.
 */
-uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error)
+uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
   
   const char *buffer_start = buffer;
   char *body_start;
   uint16_t content_length;
+
+  //TODO check if every char is printable, simd?
 
   buffer += check_begin_string(buffer, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
@@ -303,13 +305,13 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
   }
 }
 
-static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message, ff_error_t *restrict error)
+static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
+  //TODO raise buffer too small error if message fields > MAX_FIELDS
   (void)buffer;
   (void)buffer_size;
   (void)message;
   (void)error;
-  //TODO implement
 }
 
 

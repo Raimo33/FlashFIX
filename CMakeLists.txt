@@ -29,26 +29,26 @@ set_target_properties(flashfix_shared PROPERTIES
   SOVERSION ${FLASHFIX_VERSION_MAJOR}
   OUTPUT_NAME flashfix
 )
+target_compile_options(flashfix_shared PUBLIC
+  -Wall -Wextra -Werror -Wpedantic
+  -fwrapv -fno-strict-aliasing -Ofast -march=native
+  -fno-plt -fno-stack-protector -fno-semantic-interposition
+  -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops
+)
+
 
 add_library(flashfix_static STATIC ${FLASHFIX_SOURCES})
 target_include_directories(flashfix_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(flashfix_static PROPERTIES
   OUTPUT_NAME flashfix
 )
-
-set(CMAKE_CFLAGS "${CMAKE_CFLAGS}"
+target_compile_options(flashfix_static PUBLIC
   -Wall -Wextra -Werror -Wpedantic
-  -fwrapv
-  -fno-strict-aliasing
-  -Ofast  
-  -march=native
-  -fno-plt
-  -fno-stack-protector
-  -fno-semantic-interposition
-  -fno-asynchronous-unwind-tables
-  -fomit-frame-pointer
-  -funroll-loops
+  -fwrapv -fno-strict-aliasing -Ofast -march=native
+  -fno-plt -fno-stack-protector -fno-semantic-interposition
+  -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops
 )
+
 
 install(TARGETS flashfix_shared flashfix_static
   ARCHIVE DESTINATION lib

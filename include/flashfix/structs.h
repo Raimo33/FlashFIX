@@ -13,12 +13,12 @@ typedef struct __attribute__((aligned(64)))
   const char *value;
   uint16_t tag_len;
   uint16_t value_len;
-} fix_field_t;
+} ff_field_t;
 
 typedef struct __attribute__((aligned(64)))
 {
-  fix_field_t fields[FIX_MAX_FIELDS];
+  ff_field_t fields[FIX_MAX_FIELDS];
   uint8_t n_fields;
-} fix_message_t;
+} ff_message_t;
 
 #endif
