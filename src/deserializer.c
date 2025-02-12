@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 13:35:28                                                
+last edited: 2025-02-12 22:37:58                                                
 
 ================================================================================*/
 
@@ -14,7 +14,7 @@ last edited: 2025-02-12 13:35:28
 #include <string.h>
 
 HOT static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
-HOT ALWAYS_INLINE static inline bool check_zero_equal_soh(const char *candidate);
+ALWAYS_INLINE static inline bool check_zero_equal_soh(const char *candidate);
 static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *body_length, ff_error_t *restrict error);
@@ -116,7 +116,6 @@ error:
   (void)(error && (*error = local_error));
   return 0;
 }
-
 
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {

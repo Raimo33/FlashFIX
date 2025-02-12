@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 13:35:28                                                
+last edited: 2025-02-12 22:37:58                                                
 
 ================================================================================*/
 
@@ -174,67 +174,31 @@ static bool message_fits_in_buffer(const ff_message_t *restrict message, const u
   return total_len <= buffer_size;
 }
 
-//TODO simd?? swar??
 static uint8_t ultoa(uint64_t num, char *buffer)
 {
-  if (num == 0)
-  {
-    buffer[0] = '0';
-    return 1;
-  }
 
-  const uint8_t digits = 1 +
-    (num >= 10UL) +
-    (num >= 100UL) +
-    (num >= 1000UL) +
-    (num >= 10000UL) +
-    (num >= 100000UL) +
-    (num >= 1000000UL) +
-    (num >= 10000000UL) +
-    (num >= 100000000UL) +
-    (num >= 1000000000UL) +
-    (num >= 10000000000UL) +
-    (num >= 100000000000UL) +
-    (num >= 1000000000000UL) +
-    (num >= 10000000000000UL) +
-    (num >= 100000000000000UL) +
-    (num >= 1000000000000000UL) +
-    (num >= 10000000000000000UL) +
-    (num >= 100000000000000000UL) +
-    (num >= 1000000000000000000UL);
+  //TODO constexpr, digit quads? cache efficiency
+  static const char digit_pairs[] =
+    "00" "01" "02" "03" "04" "05" "06" "07" "08" "09"
+    "10" "11" "12" "13" "14" "15" "16" "17" "18" "19"
+    "20" "21" "22" "23" "24" "25" "26" "27" "28" "29"
+    "30" "31" "32" "33" "34" "35" "36" "37" "38" "39"
+    "40" "41" "42" "43" "44" "45" "46" "47" "48" "49"
+    "50" "51" "52" "53" "54" "55" "56" "57" "58" "59"
+    "60" "61" "62" "63" "64" "65" "66" "67" "68" "69"
+    "70" "71" "72" "73" "74" "75" "76" "77" "78" "79"
+    "80" "81" "82" "83" "84" "85" "86" "87" "88" "89"
+    "90" "91" "92" "93" "94" "95" "96" "97" "98" "99";
 
-  constexpr uint64_t power10[] = {
-    1UL,
-    10UL,
-    100UL,
-    1000UL,
-    10000UL,
-    100000UL,
-    1000000UL,
-    10000000UL,
-    100000000UL,
-    1000000000UL,
-    10000000000UL,
-    100000000000UL,
-    1000000000000UL,
-    10000000000000UL,
-    100000000000000UL,
-    1000000000000000UL,
-    10000000000000000UL,
-    100000000000000000UL,
-    1000000000000000000UL,
-  };
 
-  uint64_t power = power10[digits - 1];
-  char *p = buffer;
-  uint64_t quotient;
-  for (uint8_t i = 0; i < digits; i++)
-  {
-    quotient = num / power;
-    *p++ = (char)('0' + quotient);
-    num -= quotient * power;
-    power /= 10;
-  }
+  char tmp[20];
+  uint8_t len = 0;
 
-  return digits;
+  //TODO simd per dividere, simd per remainder
+
+  //TODO simd shuffle per invertire
+
+  //TODO always inline division / multiplication helpers (umulh, udiv, umod)
+
+  return len;
 }
