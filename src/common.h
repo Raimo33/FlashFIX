@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 14:56:11                                                 
-last edited: 2025-02-11 14:56:11                                                
+last edited: 2025-02-12 13:35:28                                                
 
 ================================================================================*/
 
@@ -13,7 +13,6 @@ last edited: 2025-02-11 14:56:11
 # define COMMON_H
 
 # include <stdint.h>
-# include <stdbool.h>
 # include <immintrin.h>
 
 # include "extensions.h"

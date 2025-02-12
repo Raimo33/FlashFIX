@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 01:23:56                                                
+last edited: 2025-02-12 13:35:28                                                
 
 ================================================================================*/
 
@@ -13,16 +13,20 @@ last edited: 2025-02-12 01:23:56
 
 uint8_t compute_checksum(const char *buffer, const uint16_t len)
 {
-  uint8_t checksum = 0;
-  
   const char *end = buffer + len;
+  uint8_t checksum = 0;
+  constexpr uint8_t alignment = 64;
+
+  uint8_t displacement = (const uintptr_t)buffer % alignment;
+  while (UNLIKELY(displacement-- && buffer < end))
+    checksum += *buffer++;
 
 #ifdef __AVX512F__
   while (LIKELY(buffer + 64 <= end))
   {
     PREFETCHR(buffer + 128, 3);
 
-    const __m512i vec = _mm512_loadu_si512((const __m512i *)buffer);
+    const __m512i vec = _mm512_load_si512((const __m512i *)buffer);
     const __m512i sum = _mm512_sad_epu8(vec, _mm512_setzero_si512());
     checksum += (const uint8_t)_mm512_reduce_add_epi64(sum);
 
@@ -35,7 +39,7 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
   {
     PREFETCHR(buffer + 64, 3);
 
-    const __m256i vec = _mm256_loadu_si256((const __m256i *)buffer);
+    const __m256i vec = _mm256_load_si256((const __m256i *)buffer);
     const __m256i sum = _mm256_sad_epu8(vec, _mm256_setzero_si256());
     
     __m128i sum_low = _mm256_castsi256_si128(sum);
@@ -53,7 +57,7 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
   {
     PREFETCHR(buffer + 32, 3);
 
-    const __m128i vec = _mm_loadu_si128((const __m128i *)buffer);
+    const __m128i vec = _mm_load_si128((const __m128i *)buffer);
     const __m128i sum = _mm_sad_epu8(vec, _mm_setzero_si128());
 
     checksum += (const uint8_t)(_mm_extract_epi64(sum, 0) + _mm_extract_epi64(sum, 1));
@@ -70,7 +74,7 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
     chunk = (chunk & 0x0000FFFF0000FFFFULL) + ((chunk >> 16) & 0x0000FFFF0000FFFFULL);
     chunk = (chunk & 0x00000000FFFFFFFFULL) + (chunk >> 32);
 
-    checksum += (uint8_t)word;
+    checksum += (uint8_t)chunk;
     
     buffer += 8;
   }

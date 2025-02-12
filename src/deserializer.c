@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 01:23:56                                                
+last edited: 2025-02-12 13:35:28                                                
 
 ================================================================================*/
 
@@ -13,13 +13,15 @@ last edited: 2025-02-12 01:23:56
 #include <flashfix/deserializer.h>
 #include <string.h>
 
-static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
+HOT static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
+HOT ALWAYS_INLINE static inline bool check_zero_equal_soh(const char *candidate);
 static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *body_length, ff_error_t *restrict error);
 static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_size, const uint16_t body_length, char **body_start, ff_error_t *restrict error);
 static void tokenize_message(char *restrict buffer, const uint16_t buffer_size);
 static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
+static uint32_t ff_atoui(const char *str, const char **endptr);
 
 //TODO find a way to make them const, forcing prevention of thread safety issues, constexpr??
 #ifdef __AVX512F__
@@ -69,10 +71,10 @@ CONSTRUCTOR void ff_deserializer_init(void)
 
 bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
 {
-  static const uint8_t checksum_len = STR_LEN(FIX_CHECKSUM "=000\x01");
-  static const uint8_t begin_string_len = STR_LEN(FIX_BEGINSTRING "=" FIX_VERSION "\x01");
-  static const uint8_t body_length_len = STR_LEN(FIX_BODYLENGTH "=") + 2;
-  static const uint8_t total_minimum_len = checksum_len + begin_string_len + body_length_len;
+  constexpr uint8_t checksum_len = STR_LEN(FIX_CHECKSUM "=000\x01");
+  constexpr uint8_t begin_string_len = STR_LEN(FIX_BEGINSTRING "=" FIX_VERSION "\x01");
+  constexpr uint8_t body_length_len = STR_LEN(FIX_BODYLENGTH "=") + 2;
+  constexpr uint8_t total_minimum_len = checksum_len + begin_string_len + body_length_len;
 
   if (message_len < total_minimum_len)
     return false;
@@ -83,10 +85,6 @@ bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uin
   return has_checksum;
 }
 
-/*
-TODO correctly handle all the possible edge cases coming from the network.
-multiple separators adjacent, multiple = adjacent, etc.
-*/
 uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
@@ -120,96 +118,111 @@ error:
 }
 
 
-//TODO doesnt work... handle patterns that span across multiple chunks
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
-  const char *end = buffer + buffer_size - STR_LEN(FIX_CHECKSUM "=000\x01");
+  const char *last = buffer + buffer_size - STR_LEN(FIX_CHECKSUM "=000\x01");
+  constexpr uint8_t alignment = 64;
+
+  uint8_t displacement = (const uintptr_t)buffer % alignment;
+  while (UNLIKELY(displacement-- && buffer < last))
+  {
+    if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
+      return buffer;
+
+    buffer++;
+  }
 
 #ifdef __AVX512F__
-  while (LIKELY(buffer + 64 <= end))
+  while (LIKELY(buffer + 64 <= last))
   {
-    PREFETCHR(buffer + 128, 3);
+    const __m512i chunk = _mm512_load_si512((__m512i*)buffer);
+    const __m512i cmp = _mm512_cmpeq_epi8(chunk, _512_vec_ones);
+    __mmask64 mask = __mm512_movemask_epi8(cmp);
 
-    const __m512i chunk = _mm512_loadu_si512((const void*)(buffer));
+    while (UNLIKELY(mask))
+    {
+      const int32_t offset = __builtin_ctzll(mask);
+      const char *candidate = buffer + offset;
 
-    const __mmask64 m1 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_ones);
-    const __mmask64 m2 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_zeros);
-    const __mmask64 m3 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_equals);
-    const __mmask64 m4 = _mm512_cmpeq_epi8_mask(chunk, _512_vec_soh);
+      if (UNLIKELY(check_zero_equal_soh(candidate + 1)))
+        return candidate;
 
-    __mmask64 candidates = _kand_mask64(m1, _kshiftri_mask64(m2, 1));
-    candidates = _kand_mask64(candidates, _kshiftri_mask64(m3, 2));
-    candidates = _kand_mask64(candidates, _kshiftri_mask64(m4, 6));
-
-    if (UNLIKELY(candidates))
-      return buffer + __builtin_ctzll(candidates);
+      mask &= mask - 1;
+    }
 
     buffer += 64;
   }
 #endif
 
 #ifdef __AVX2__
-  while (LIKELY(buffer + 32 <= end))
+  while (LIKELY(buffer + 32 <= last))
   {
-    PREFETCHR(buffer + 64, 3);
+    const __m256i chunk = _mm256_load_si256((__m256i*)buffer);
+    const __m256i cmp = _mm256_cmpeq_epi8(chunk, _256_vec_ones);
+    int32_t mask = _mm256_movemask_epi8(cmp);
 
-    const __m256i chunk = _mm256_loadu_si256((const void*)(buffer));
+    while (UNLIKELY(mask))
+    {
+      const int32_t offset = __builtin_ctz(mask);
+      const char *candidate = buffer + offset;
 
-    const __m256i m1 = _mm256_cmpeq_epi8(chunk, _256_vec_ones);
-    const __m256i m2 = _mm256_cmpeq_epi8(chunk, _256_vec_zeros);
-    const __m256i m3 = _mm256_cmpeq_epi8(chunk, _256_vec_equals);
-    const __m256i m4 = _mm256_cmpeq_epi8(chunk, _256_vec_soh);
+      if (UNLIKELY(check_zero_equal_soh(candidate + 1)))
+        return candidate;
 
-    const __m256i shifted_m2 = _mm256_srli_epi64(m2, 1);
-    const __m256i shifted_m3 = _mm256_srli_epi64(m3, 2);
-    const __m256i shifted_m4 = _mm256_srli_epi64(m4, 6);
-
-    __m256i candidates = _mm256_and_si256(m1, shifted_m2);
-    candidates = _mm256_and_si256(candidates, shifted_m3);
-    candidates = _mm256_and_si256(candidates, shifted_m4);
-
-    const int32_t mask = _mm256_movemask_epi8(candidates);
-    if (UNLIKELY(mask))
-      return buffer + __builtin_ctz(mask);
+      mask &= mask - 1;
+    }
 
     buffer += 32;
   }
 #endif
 
 #ifdef __SSE2__
-  while (LIKELY(buffer + 16 <= end))
+  while (LIKELY(buffer + 16 <= last))
   {
-    PREFETCHR(buffer + 32, 3);
+    const __m128i chunk = _mm_load_si128((__m128i*)buffer);
+    const __m128i cmp = _mm_cmpeq_epi8(chunk, _128_vec_ones);
+    int32_t mask = _mm_movemask_epi8(cmp);
 
-    const __m128i chunk = _mm_loadu_si128((const __m128i*)(buffer));
+    while (UNLIKELY(mask))
+    {
+      const int32_t offset = __builtin_ctz(mask);
+      const char *candidate = buffer + offset;
 
-    const __m128i m1 = _mm_cmpeq_epi8(chunk, _128_vec_ones);
-    const __m128i m2 = _mm_cmpeq_epi8(chunk, _128_vec_zeros);
-    const __m128i m3 = _mm_cmpeq_epi8(chunk, _128_vec_equals);
-    const __m128i m4 = _mm_cmpeq_epi8(chunk, _128_vec_soh);
+      if (UNLIKELY(check_zero_equal_soh(candidate + 1)))
+        return candidate;
 
-    const __m128i shifted_m2 = _mm_srli_epi64(m2, 1);
-    const __m128i shifted_m3 = _mm_srli_epi64(m3, 2);
-    const __m128i shifted_m4 = _mm_srli_epi64(m4, 6);
-
-    __m128i candidates = _mm_and_si128(m1, shifted_m2);
-    candidates = _mm_and_si128(candidates, shifted_m3);
-    candidates = _mm_and_si128(candidates, shifted_m4);
-
-    const int32_t mask = _mm_movemask_epi8(candidates);
-    if (UNLIKELY(mask))
-      return buffer + __builtin_ctz(mask);
+      mask &= mask - 1;
+    }
 
     buffer += 16;
   }
 #endif
 
-  //TODO find a way to compare all 7 bytes at once without potential UB. the buffer is guaranteed to have 7 bytes left, not 8.
-  //or at least combine the first 4 comparisons in a single 32 bit integer (with masks to mask out the last one)
-  //or at least combine the first 2 comparisons in a single 16 bit integer (without masks, straight up !=)
-  while (LIKELY(buffer < end))
+  constexpr uint64_t repeated = 0x3131313131313131ULL; 
+  while (LIKELY(buffer + 8 <= last))
   {
-    if (buffer[0] == '1' && buffer[1] == '0' && buffer[2] == '=' && buffer[6] == '\x01')
+    const uint64_t chunk = *(const uint64_t *)buffer;
+    const uint64_t cmp = chunk ^ repeated;
+    uint64_t mask = (cmp - 0x0101010101010101ULL) & ~cmp & 0x8080808080808080ULL;
+
+    while (UNLIKELY(mask))
+    {
+      const int32_t byte_offset = __builtin_ctzll(mask) >> 3;
+      const char *candidate = buffer + byte_offset;
+
+      if (UNLIKELY(check_zero_equal_soh(candidate + 1)))
+        return candidate;
+
+      mask &= mask - 1;
+    }
+
+    buffer += 8;
+  }
+
+
+  while (LIKELY(buffer < last))
+  {
+    if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
       return buffer;
     buffer++;
   }
@@ -217,9 +230,14 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
   return NULL;
 }
 
+static inline bool check_zero_equal_soh(const char *buffer)
+{
+  return *(const uint16_t *)(buffer) == *(const uint16_t *)"0=" && buffer[6] == '\x01';
+}
+
 static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restrict error)
 {
-  static const char begin_string_tag[] = FIX_BEGINSTRING "=" FIX_VERSION "\x01";
+  constexpr char begin_string_tag[] = FIX_BEGINSTRING "=" FIX_VERSION "\x01";
 
   *error = FF_INVALID_MESSAGE * (*(uint16_t *)buffer != *(const uint16_t *)begin_string_tag);
 
@@ -228,7 +246,7 @@ static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restri
 
 static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *restrict error)
 {
-  static const char body_length_tag[] = FIX_BODYLENGTH "=";
+  constexpr char body_length_tag[] = FIX_BODYLENGTH "=";
 
   *error = FF_INVALID_MESSAGE * memcmp(buffer, body_length_tag, STR_LEN(body_length_tag));
 
@@ -266,13 +284,22 @@ static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_siz
 static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
 {
   const char *end = buffer + buffer_size;
+  constexpr uint8_t alignment = 64;
+
+  uint8_t displacement = (const uintptr_t)buffer % alignment;
+  while (UNLIKELY(displacement-- && buffer < end))
+  {
+    const char c = *buffer;
+    *buffer = (c != '\x01' && c != '=') * c;
+    buffer++;
+  }
 
 #ifdef __AVX512F__
   while (LIKELY(buffer + 64 <= end))
   {
     PREFETCHR(buffer + 128, 3);
   
-    const __m512i chunk = _mm512_loadu_si512((__m512i*)buffer);
+    const __m512i chunk = _mm512_load_si512((__m512i*)buffer);
 
     const __m512i cmp_soh     = _mm512_cmpeq_epi8(chunk, _512_vec_soh);
     const __m512i cmp_equals  = _mm512_cmpeq_epi8(chunk, _512_vec_equals);
@@ -290,7 +317,7 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
   {
     PREFETCHR(buffer + 64, 3);
   
-    const __m256i chunk = _mm256_loadu_si256((__m256i*)buffer);
+    const __m256i chunk = _mm256_load_si256((__m256i*)buffer);
 
     const __m256i cmp_soh     = _mm256_cmpeq_epi8(chunk, _256_vec_soh);
     const __m256i cmp_equals  = _mm256_cmpeq_epi8(chunk, _256_vec_equals);
@@ -308,7 +335,7 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
   {
     PREFETCHR(buffer + 32, 3);
   
-    const __m128i chunk = _mm_loadu_si128((__m128i*)buffer);
+    const __m128i chunk = _mm_load_si128((__m128i*)buffer);
 
     const __m128i cmp_soh     = _mm_cmpeq_epi8(chunk, _128_vec_soh);
     const __m128i cmp_equals  = _mm_cmpeq_epi8(chunk, _128_vec_equals);
@@ -321,10 +348,10 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
   }
 #endif
 
-  static const uint64_t mask_soh = 0x0101010101010101ULL;
-  static const uint64_t mask_equals = 0x3D3D3D3D3D3D3D3DULL;
-  static const uint64_t ones = 0x0101010101010101ULL;
-  static const uint64_t high_mask = 0x8080808080808080ULL;
+  constexpr uint64_t mask_soh = 0x0101010101010101ULL;
+  constexpr uint64_t mask_equals = 0x3D3D3D3D3D3D3D3DULL;
+  constexpr uint64_t ones = 0x0101010101010101ULL;
+  constexpr uint64_t high_mask = 0x8080808080808080ULL;
   
   while (LIKELY(buffer + 8 <= end))
   {
@@ -354,6 +381,7 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
 static void fill_message_fields(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   //TODO raise buffer too small error if message fields > MAX_FIELDS
+  //TODO handle adiacent | and =
   (void)buffer;
   (void)buffer_size;
   (void)message;
