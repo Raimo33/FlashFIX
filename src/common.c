@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-11 14:56:11                                                
+last edited: 2025-02-12 01:23:56                                                
 
 ================================================================================*/
 
@@ -62,7 +62,18 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
   }
 #endif
 
-//TODO ultimo loop SWAR per blocchetti di 8 byte (uint64_t)
+  while (LIKELY(buffer + 8 <= end))
+  {
+    uint64_t chunk = *(const uint64_t *)buffer;
+
+    chunk = (chunk & 0x00FF00FF00FF00FFULL) + ((chunk >> 8) & 0x00FF00FF00FF00FFULL);
+    chunk = (chunk & 0x0000FFFF0000FFFFULL) + ((chunk >> 16) & 0x0000FFFF0000FFFFULL);
+    chunk = (chunk & 0x00000000FFFFFFFFULL) + (chunk >> 32);
+
+    checksum += (uint8_t)word;
+    
+    buffer += 8;
+  }
 
   while (LIKELY(buffer < end))
     checksum += *buffer++;
