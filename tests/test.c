@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-11 12:37:26                                                
+last edited: 2025-02-13 18:56:52                                                
 
 ================================================================================*/
 
@@ -734,7 +734,7 @@ static char *test_deserialize_wrong_body_length1(void)
     "10=121\x01";
   const ff_message_t expected_message = {0};
   const uint16_t expected_len = 0;
-  const ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH; //TODO is it called body size? standard name?
+  const ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH;
 
   ff_message_t message;
   ff_error_t error = FF_OK;
@@ -762,7 +762,7 @@ static char *test_deserialize_wrong_body_length2(void)
     "10=119\x01";
   const ff_message_t expected_message = {0};
   const uint16_t expected_len = 0;
-  const ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH; //TODO is it called body size? standard name?
+  const ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH;
 
   ff_message_t message;
   ff_error_t error = FF_OK;

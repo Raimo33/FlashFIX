@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 13:35:28                                                
+last edited: 2025-02-13 18:56:52                                                
 
 ================================================================================*/
 
@@ -13,7 +13,7 @@ last edited: 2025-02-12 13:35:28
 
 uint8_t compute_checksum(const char *buffer, const uint16_t len)
 {
-  const char *end = buffer + len;
+  const char *const end = buffer + len;
   uint8_t checksum = 0;
   constexpr uint8_t alignment = 64;
 

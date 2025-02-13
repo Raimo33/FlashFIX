@@ -1,0 +1,42 @@
+[
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc -Dflashfix_shared_EXPORTS -I/home/claudio/Desktop/FlashFIX/include -g -fPIC -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/flashfix_shared.dir/src/deserializer.c.o -c /home/claudio/Desktop/FlashFIX/src/deserializer.c",
+  "file": "/home/claudio/Desktop/FlashFIX/src/deserializer.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc -Dflashfix_shared_EXPORTS -I/home/claudio/Desktop/FlashFIX/include -g -fPIC -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/flashfix_shared.dir/src/serializer.c.o -c /home/claudio/Desktop/FlashFIX/src/serializer.c",
+  "file": "/home/claudio/Desktop/FlashFIX/src/serializer.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc -Dflashfix_shared_EXPORTS -I/home/claudio/Desktop/FlashFIX/include -g -fPIC -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/flashfix_shared.dir/src/common.c.o -c /home/claudio/Desktop/FlashFIX/src/common.c",
+  "file": "/home/claudio/Desktop/FlashFIX/src/common.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc  -I/home/claudio/Desktop/FlashFIX/include -g -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/flashfix_static.dir/src/deserializer.c.o -c /home/claudio/Desktop/FlashFIX/src/deserializer.c",
+  "file": "/home/claudio/Desktop/FlashFIX/src/deserializer.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc  -I/home/claudio/Desktop/FlashFIX/include -g -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/flashfix_static.dir/src/serializer.c.o -c /home/claudio/Desktop/FlashFIX/src/serializer.c",
+  "file": "/home/claudio/Desktop/FlashFIX/src/serializer.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc  -I/home/claudio/Desktop/FlashFIX/include -g -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/flashfix_static.dir/src/common.c.o -c /home/claudio/Desktop/FlashFIX/src/common.c",
+  "file": "/home/claudio/Desktop/FlashFIX/src/common.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc  -I/home/claudio/Desktop/FlashFIX/include -g -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/test_static.dir/tests/test.c.o -c /home/claudio/Desktop/FlashFIX/tests/test.c",
+  "file": "/home/claudio/Desktop/FlashFIX/tests/test.c"
+},
+{
+  "directory": "/home/claudio/Desktop/FlashFIX/build",
+  "command": "/usr/bin/gcc  -I/home/claudio/Desktop/FlashFIX/include -g -Wall -Wextra -Werror -Wpedantic -fwrapv -fno-strict-aliasing -Ofast -march=native -fno-plt -fno-stack-protector -fno-semantic-interposition -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops -std=gnu2x -o CMakeFiles/test_shared.dir/tests/test.c.o -c /home/claudio/Desktop/FlashFIX/tests/test.c",
+  "file": "/home/claudio/Desktop/FlashFIX/tests/test.c"
+}
+]

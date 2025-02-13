@@ -1,0 +1,106 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-995d9e0278c3c2907632.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "flashfix",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "flashfix_shared::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-flashfix_shared-Debug-425140b70bbf8b8859f9.json",
+					"name" : "flashfix_shared",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "flashfix_static::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-flashfix_static-Debug-bcc19bcef0cc51dc8ed1.json",
+					"name" : "flashfix_static",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "run_tests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-run_tests-Debug-7f9bc2a29b88b1edc208.json",
+					"name" : "run_tests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_shared::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_shared-Debug-57afe63f137babb1559f.json",
+					"name" : "test_shared",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_static::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_static-Debug-bbc7da18afa65f606900.json",
+					"name" : "test_static",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "tests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-tests-Debug-c6cb7c336b75e35c7fab.json",
+					"name" : "tests",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/claudio/Desktop/FlashFIX/build",
+		"source" : "/home/claudio/Desktop/FlashFIX"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

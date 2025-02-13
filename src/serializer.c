@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-13 13:38:07                                                
+last edited: 2025-02-13 18:56:52                                                
 
 ================================================================================*/
 
@@ -57,7 +57,7 @@ uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const ff_message
 {
   ff_error_t local_error = FF_OK;
 
-  const char *buffer_start = buffer;
+  const char *const buffer_start = buffer;
 
   if (UNLIKELY(!message_fits_in_buffer(message, buffer_size)))
   {
@@ -90,7 +90,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
 {
   ff_error_t local_error = FF_OK;
 
-  const char *buffer_start = buffer;
+  const char *const buffer_start = buffer;
 
   static const ff_field_t begin_string = {
     .tag = FIX_BEGINSTRING,
@@ -99,7 +99,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
     .value_len = STR_LEN(FIX_VERSION)
   };
 
-  char body_length_str[16];
+  char body_length_str[16] = {0};
   const ff_field_t body_length = {
     .tag = FIX_BODYLENGTH,
     .tag_len = STR_LEN(FIX_BODYLENGTH),
@@ -193,36 +193,6 @@ static bool message_fits_in_buffer(const ff_message_t *restrict message, const u
   }
 #endif
 
-#ifdef __AVX2__
-  while (LIKELY(i + 8 < message->n_fields))
-  {
-    const __m256i lengths = _mm256_i32gather_epi32(message->fields + i, _256_len_offsets, sizeof(ff_field_t));
-
-    const __m256i tag_len = _mm256_and_si256(lengths, _256_mask_lower_16);
-    const __m256i value_len = _mm256_srli_epi32(lengths, 16);
-
-    const __m256i sum = _mm256_add_epi32(tag_len, value_len);
-    total_len +=  //TODO reduce adding
-
-    i += 8;
-  }
-#endif
-
-#ifdef __SSE2__
-  while (LIKELY(i + 4 < message->n_fields))
-  {
-    const __m128i lengths = //TODO gather
-
-    const __m128i tag_len = _mm_and_si128(lengths, _128_mask_lower_16);
-    const __m128i value_len = _mm_srli_epi32(lengths, 16);
-
-    const __m128i sum = _mm_add_epi32(tag_len, value_len);
-    total_len += //TODO reduce adding
-
-    i += 4;
-  }
-#endif
-
   while (LIKELY(i < message->n_fields))
   {
     total_len += message->fields[i].tag_len + message->fields[i].value_len;
@@ -234,17 +204,17 @@ static bool message_fits_in_buffer(const ff_message_t *restrict message, const u
 
 static uint8_t utoa(uint16_t num, char *buffer)
 {
-  constexpr char digit_pairs[] =
-    "00" "01" "02" "03" "04" "05" "06" "07" "08" "09"
-    "10" "11" "12" "13" "14" "15" "16" "17" "18" "19"
-    "20" "21" "22" "23" "24" "25" "26" "27" "28" "29"
-    "30" "31" "32" "33" "34" "35" "36" "37" "38" "39"
-    "40" "41" "42" "43" "44" "45" "46" "47" "48" "49"
-    "50" "51" "52" "53" "54" "55" "56" "57" "58" "59"
-    "60" "61" "62" "63" "64" "65" "66" "67" "68" "69"
-    "70" "71" "72" "73" "74" "75" "76" "77" "78" "79"
-    "80" "81" "82" "83" "84" "85" "86" "87" "88" "89"
-    "90" "91" "92" "93" "94" "95" "96" "97" "98" "99";
+  constexpr char digit_pairs_reverse[] =
+    "00" "10" "20" "30" "40" "50" "60" "70" "80" "90"
+    "01" "11" "21" "31" "41" "51" "61" "71" "81" "91"
+    "02" "12" "22" "32" "42" "52" "62" "72" "82" "92"
+    "03" "13" "23" "33" "43" "53" "63" "73" "83" "93"
+    "04" "14" "24" "34" "44" "54" "64" "74" "84" "94"
+    "05" "15" "25" "35" "45" "55" "65" "75" "85" "95"
+    "06" "16" "26" "36" "46" "56" "66" "76" "86" "96"
+    "07" "17" "27" "37" "47" "57" "67" "77" "87" "97"
+    "08" "18" "28" "38" "48" "58" "68" "78" "88" "98"
+    "09" "19" "29" "39" "49" "59" "69" "79" "89" "99";
 
   char tmp[sizeof(__m128i)] ALIGNED(16) = {0};
   uint8_t len = 0;
@@ -256,26 +226,19 @@ static uint8_t utoa(uint16_t num, char *buffer)
   {
     const uint16_t q = div100(num);
     const uint8_t r = num - mul100(q);
-
-    *(uint16_t *)(tmp + len) = *(const uint16_t *)(digit_pairs + (r << 1));
-    len += 2;
+    
+    *(uint16_t *)(tmp + len) = *(uint16_t *)(digit_pairs_reverse + (r << 1));
     num = q;
   }
 
   const bool is_single_digit = num < 10;
   len += is_single_digit;
-  *(uint16_t *)(tmp + len - is_single_digit) = *(const uint16_t *)(digit_pairs + (num << 1));
+  *(uint16_t *)(tmp + len - is_single_digit) = *(const uint16_t *)(digit_pairs_reverse + (num << 1));
   len += 2 - is_single_digit;
 
-#ifdef __SSE2__
-  const __m128i vec = _mm_load_si128((__m128i *)tmp);
-  const __m128i reversed_vec = _mm_shuffle_epi8(vec, _128_reverse_mask);
-  _mm_storeu_si128((__m128i *)buffer, reversed_vec);
-#else
   uint8_t i = len;
   while (LIKELY(i--))
     *buffer++ = tmp[i];
-#endif
 
   return len;
 }
