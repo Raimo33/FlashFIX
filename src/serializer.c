@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 22:37:58                                                
+last edited: 2025-02-13 12:20:56                                                
 
 ================================================================================*/
 
@@ -13,33 +13,35 @@ last edited: 2025-02-12 22:37:58
 #include <flashfix/serializer.h>
 #include <string.h>
 
-static uint8_t ultoa(uint64_t num, char *buffer);
 static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size);
+static uint8_t utoa(uint16_t num, char *buffer);
+ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
+ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
 
 #ifdef __AVX512F__
-  //TODO declare the AVX512F vars
+
 #endif
 
 #ifdef __AVX2__
-  //TODO declare the AVX2 vars
+
 #endif
 
 #ifdef __SSE2__
-  //TODO declare the SSE2 vars
+  static __m128i _128_reverse_mask;
 #endif
 
 CONSTRUCTOR void ff_serializer_init(void)
 {
 #ifdef __AVX512F__
-  //TODO init the AVX512F vars
+
 #endif
 
 #ifdef __AVX2__
-  //TODO init the AVX2 vars
+
 #endif
 
 #ifdef __SSE2__
-  //TODO init the SSE2 vars
+  _128_reverse_mask  = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #endif
 }
 
@@ -94,7 +96,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
     .tag = FIX_BODYLENGTH,
     .tag_len = STR_LEN(FIX_BODYLENGTH),
     .value = body_length_str,
-    .value_len = ultoa(len, body_length_str)
+    .value_len = utoa(len, body_length_str)
   };
 
   const uint8_t added_len = begin_string.tag_len + 1 + begin_string.value_len + 1 + body_length.tag_len + 1 + body_length.value_len + 1;
@@ -174,11 +176,9 @@ static bool message_fits_in_buffer(const ff_message_t *restrict message, const u
   return total_len <= buffer_size;
 }
 
-static uint8_t ultoa(uint64_t num, char *buffer)
+static uint8_t utoa(uint16_t num, char *buffer)
 {
-
-  //TODO constexpr, digit quads? cache efficiency
-  static const char digit_pairs[] =
+  constexpr char digit_pairs[] =
     "00" "01" "02" "03" "04" "05" "06" "07" "08" "09"
     "10" "11" "12" "13" "14" "15" "16" "17" "18" "19"
     "20" "21" "22" "23" "24" "25" "26" "27" "28" "29"
@@ -190,15 +190,46 @@ static uint8_t ultoa(uint64_t num, char *buffer)
     "80" "81" "82" "83" "84" "85" "86" "87" "88" "89"
     "90" "91" "92" "93" "94" "95" "96" "97" "98" "99";
 
-
-  char tmp[20];
+  char tmp[sizeof(__m128i)] ALIGNED(16) = {0};
   uint8_t len = 0;
 
-  //TODO simd per dividere, simd per remainder
+  if (UNLIKELY(num == 0))
+    return (*buffer = '0', 1);
 
-  //TODO simd shuffle per invertire
+  while (LIKELY(num >= 100))
+  {
+    const uint16_t q = div100(num);
+    const uint8_t r = num - mul100(q);
 
-  //TODO always inline division / multiplication helpers (umulh, udiv, umod)
+    *(uint16_t *)(tmp + len) = *(const uint16_t *)(digit_pairs + (r << 1));
+    len += 2;
+    num = q;
+  }
+
+  const bool is_single_digit = num < 10;
+  len += is_single_digit;
+  *(uint16_t *)(tmp + len - is_single_digit) = *(const uint16_t *)(digit_pairs + (num << 1));
+  len += 2 - is_single_digit;
+
+#ifdef __SSE2__
+  const __m128i vec = _mm_load_si128((__m128i*)tmp);
+  const __m128i reversed_vec = _mm_shuffle_epi8(vec, _128_reverse_mask);
+  _mm_store_si128((__m128i*)buffer, reversed_vec);
+#else
+  uint8_t i = len;
+  while (LIKELY(i--))
+    *buffer++ = tmp[i];
+#endif
 
   return len;
+}
+
+static inline uint16_t div100(uint16_t n)
+{ 
+  return ((uint32_t)n * 5243U) >> 19;
+}
+
+static inline uint16_t mul100(uint16_t n)
+{
+  return (n << 6) + (n << 5) + (n << 2);
 }
