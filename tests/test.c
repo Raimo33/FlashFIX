@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-13 18:56:52                                                
+last edited: 2025-02-13 22:29:54                                                
 
 ================================================================================*/
 
@@ -17,6 +17,27 @@ last edited: 2025-02-13 18:56:52
 # define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
 
 int tests_run = 0;
+
+static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
+{
+  if (a->n_fields != b->n_fields)
+    return false;
+
+  for (uint8_t i = 0; i < a->n_fields; i++)
+  {
+    const bool tag_lens_equal = a->fields[i].tag_len == b->fields[i].tag_len;
+    const bool value_lens_equal = a->fields[i].value_len == b->fields[i].value_len;
+    const bool tags_equal = memcmp(a->fields[i].tag, b->fields[i].tag, a->fields[i].tag_len) == 0;
+    const bool values_equal = memcmp(a->fields[i].value, b->fields[i].value, a->fields[i].value_len) == 0;
+
+    const bool are_equal = tag_lens_equal && value_lens_equal && tags_equal && values_equal;
+
+    if (!are_equal)
+      return false;
+  }
+
+  return true;
+}
 
 static char *all_tests(void);
 static char *test_serialize_normal_message(void);
@@ -453,7 +474,7 @@ static char *test_deserialize_normal_message(void)
 
   mu_assert("error: deserialize normal message: wrong length", len == expected_len);
   mu_assert("error: deserialize normal message: wrong error", error == expected_error);
-  mu_assert("error: deserialize normal message: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize normal message: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -572,7 +593,7 @@ static char *test_deserialize_no_error_param(void)
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, NULL);
 
   mu_assert("error: deserialize no error param: wrong length", len == expected_len);
-  mu_assert("error: deserialize no error param: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize no error param: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -604,7 +625,7 @@ static char *test_deserialize_adjacent_separators(void)
 
   mu_assert("error: deserialize adjacent separators: wrong length", len == expected_len);
   mu_assert("error: deserialize adjacent separators: wrong error", error == expected_error);
-  mu_assert("error: deserialize adjacent separators: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize adjacent separators: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -632,7 +653,7 @@ static char *test_deserialize_adjacent_equals(void)
 
   mu_assert("error: deserialize adjacent equals: wrong length", len == expected_len);
   mu_assert("error: deserialize adjacent equals: wrong error", error == expected_error);
-  mu_assert("error: deserialize adjacent equals: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize adjacent equals: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -659,7 +680,7 @@ static char *test_deserialize_no_beginstr(void)
 
   mu_assert("error: deserialize no begin string: wrong length", len == expected_len);
   mu_assert("error: deserialize no begin string: wrong error", error == expected_error);
-  mu_assert("error: deserialize no begin string: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize no begin string: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -686,7 +707,7 @@ static char *test_deserialize_no_body_length(void)
 
   mu_assert("error: deserialize no body length: wrong length", len == expected_len);
   mu_assert("error: deserialize no body length: wrong error", error == expected_error);
-  mu_assert("error: deserialize no body length: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize no body length: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -714,7 +735,7 @@ static char *test_deserialize_wrong_beginstr(void)
 
   mu_assert("error: deserialize wrong beginstr: wrong length", len == expected_len);
   mu_assert("error: deserialize wrong beginstr: wrong error", error == expected_error);
-  mu_assert("error: deserialize wrong beginstr: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize wrong beginstr: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -742,7 +763,7 @@ static char *test_deserialize_wrong_body_length1(void)
 
   mu_assert("error: deserialize wrong bodylength 1: wrong length", len == expected_len);
   mu_assert("error: deserialize wrong bodylength 1: wrong error", error == expected_error);
-  mu_assert("error: deserialize wrong bodylength 1: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize wrong bodylength 1: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -770,7 +791,7 @@ static char *test_deserialize_wrong_body_length2(void)
 
   mu_assert("error: deserialize wrong bodylength 2: wrong length", len == expected_len);
   mu_assert("error: deserialize wrong bodylength 2: wrong error", error == expected_error);
-  mu_assert("error: deserialize wrong bodylength 2: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize wrong bodylength 2: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -798,7 +819,7 @@ static char *test_deserialize_checksum_mismatch(void)
 
   mu_assert("error: deserialize checksum mismatch: wrong length", len == expected_len);
   mu_assert("error: deserialize checksum mismatch: wrong error", error == expected_error);
-  mu_assert("error: deserialize checksum mismatch: wrong message", memcmp(&message, &expected_message, sizeof(ff_message_t)) == 0);
+  mu_assert("error: deserialize checksum mismatch: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }

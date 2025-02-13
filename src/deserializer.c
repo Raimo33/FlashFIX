@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-13 18:56:52                                                
+last edited: 2025-02-13 22:29:54                                                
 
 ================================================================================*/
 
@@ -18,9 +18,10 @@ ALWAYS_INLINE static inline bool check_zero_equal_soh(const char *candidate);
 static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *restrict error);
 static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *body_length, ff_error_t *restrict error);
-static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_size, const uint16_t body_length, char **body_start, ff_error_t *restrict error);
+static inline uint16_t validate_message(const char *buffer_start, const uint16_t buffer_size, const char *body_start, const uint16_t body_length, ff_error_t *restrict error);
 static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
 static uint32_t ff_atoui(const char *str, const char **endptr);
+ALWAYS_INLINE static inline uint32_t mul10(uint32_t n);
 
 //TODO find a way to make them const, forcing prevention of thread safety issues, constexpr??
 #ifdef __AVX512F__
@@ -84,24 +85,26 @@ bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uin
   return has_checksum;
 }
 
-uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
+//TODO reduce branching
+uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
   
   const char *const buffer_start = buffer;
-  char *body_start;
-  uint16_t body_length;
-
+  
   buffer += check_begin_string(buffer, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
-
+  
   buffer += check_body_length_tag(buffer, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
-
+  
+  uint16_t body_length;
   buffer += deserialize_body_length(buffer, &body_length, &local_error);
   if (UNLIKELY(local_error != FF_OK)) goto error;
 
-  buffer += validate_checksum(buffer, buffer_size, body_length, &body_start, &local_error);
+  char *const body_start = buffer;
+
+  buffer += validate_message(buffer_start, buffer_size, body_start, body_length, &local_error); 
   if (UNLIKELY(local_error != FF_OK)) goto error;
 
   tokenize(body_start, body_length, message, &local_error);
@@ -259,27 +262,33 @@ static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *bod
   return buffer - buffer_start;
 }
 
-static inline uint16_t validate_checksum(char *buffer, const uint16_t buffer_size, const uint16_t body_length, char **body_start, ff_error_t *restrict error)
+//TODO split in two: validate body length, validate checksum
+static inline uint16_t validate_message(const char *buffer_start, const uint16_t buffer_size, const char *body_start, const uint16_t body_length, ff_error_t *restrict error)
 {
-  *body_start = buffer;
+  const uint16_t remaining = buffer_size - (body_start - buffer_start);
 
-  const char *const body_end = get_checksum_start(buffer, buffer_size);
-  const char *const checksum_start = body_end + STR_LEN(FIX_CHECKSUM "=");
-  if (UNLIKELY(body_end - *body_start != body_length))
+  const char *buffer = get_checksum_start(body_start, remaining);
+  if (UNLIKELY(buffer - body_start != body_length))
     return (*error = FF_BODY_LENGTH_MISMATCH, 0);
+  buffer += STR_LEN(FIX_CHECKSUM "=");
 
-  const uint8_t expected_checksum = compute_checksum(*body_start, body_length);
-  const uint8_t provided_checksum = (uint8_t)ff_atoui(checksum_start, (const char **)&buffer);
+  const uint16_t header_length = body_start - buffer_start;
+
+  const uint8_t expected_checksum = compute_checksum(buffer_start, body_length + header_length);
+  const uint8_t provided_checksum = (uint8_t)ff_atoui(buffer, (const char **)&buffer);
+
   if (UNLIKELY(expected_checksum != provided_checksum))
     return (*error = FF_CHECKSUM_MISMATCH, 0);
   buffer += STR_LEN("\x01");
 
-  return buffer - *body_start;  
+  return buffer - body_start;  
 }
 
 static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   const char *const end = buffer + buffer_size;
+
+  bzero(message, sizeof(ff_message_t));
 
   while (LIKELY(buffer < end))
   {
@@ -322,12 +331,17 @@ static uint32_t ff_atoui(const char *str, const char **endptr)
 
   while (LIKELY(*str >= '0' && *str <= '9'))
   {
-    result = (result << 3) + (result << 1) + (uint32_t)(*str - '0');
+    result = mul10(result) + (*str - '0');
     str++;
   }
 
   (void)(endptr && (*endptr = str));
   return result;
+}
+
+static inline uint32_t mul10(uint32_t n)
+{
+  return (n << 3) + (n << 1);
 }
 
 
