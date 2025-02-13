@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-13 12:20:56                                                
+last edited: 2025-02-13 13:38:07                                                
 
 ================================================================================*/
 
@@ -19,28 +19,36 @@ ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
 ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
 
 #ifdef __AVX512F__
-
+  static __m512i _512_len_offsets;
+  static __m512i _512_mask_lower_16;
 #endif
 
 #ifdef __AVX2__
-
+  static __m256i _256_len_offsets;
+  static __m256i _256_mask_lower_16;
 #endif
 
 #ifdef __SSE2__
+  static __m128i _128_len_offsets;
+  static __m128i _128_mask_lower_16;
   static __m128i _128_reverse_mask;
 #endif
 
 CONSTRUCTOR void ff_serializer_init(void)
 {
 #ifdef __AVX512F__
-
+  _512_len_offsets = _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+  _512_mask_lower_16 = _mm512_set1_epi32(0xFFFF);
 #endif
 
 #ifdef __AVX2__
-
+  _256_len_offsets = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+  _256_mask_lower_16 = _mm256_set1_epi32(0xFFFF);
 #endif
 
 #ifdef __SSE2__
+  _128_len_offsets = _mm_set_epi32(3, 2, 1, 0);
+  _128_mask_lower_16 = _mm_set1_epi32(0xFFFF);
   _128_reverse_mask  = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #endif
 }
@@ -165,13 +173,61 @@ error:
   return 0;
 }
 
-//TODO simd, adesso sono accanto le len dei tag e dei valori
 static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size)
 {
   uint16_t total_len = (message->n_fields << 1);
+  uint8_t i = 0;
 
-  for (uint8_t i = 0; LIKELY(i < message->n_fields); i++)
+#ifdef __AVX512F__
+  while (LIKELY(i + 16 < message->n_fields))
+  {
+    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, message->fields + i, sizeof(ff_field_t));
+
+    const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
+    const __m512i value_len = _mm512_srli_epi32(lengths, 16);
+
+    const __m512i sum = _mm512_add_epi32(tag_len, value_len);
+    total_len += _mm512_reduce_add_epi32(sum);
+
+    i += 16;
+  }
+#endif
+
+#ifdef __AVX2__
+  while (LIKELY(i + 8 < message->n_fields))
+  {
+    const __m256i lengths = _mm256_i32gather_epi32(message->fields + i, _256_len_offsets, sizeof(ff_field_t));
+
+    const __m256i tag_len = _mm256_and_si256(lengths, _256_mask_lower_16);
+    const __m256i value_len = _mm256_srli_epi32(lengths, 16);
+
+    const __m256i sum = _mm256_add_epi32(tag_len, value_len);
+    total_len +=  //TODO reduce adding
+
+    i += 8;
+  }
+#endif
+
+#ifdef __SSE2__
+  while (LIKELY(i + 4 < message->n_fields))
+  {
+    const __m128i lengths = //TODO gather
+
+    const __m128i tag_len = _mm_and_si128(lengths, _128_mask_lower_16);
+    const __m128i value_len = _mm_srli_epi32(lengths, 16);
+
+    const __m128i sum = _mm_add_epi32(tag_len, value_len);
+    total_len += //TODO reduce adding
+
+    i += 4;
+  }
+#endif
+
+  while (LIKELY(i < message->n_fields))
+  {
     total_len += message->fields[i].tag_len + message->fields[i].value_len;
+    i++;
+  }
 
   return total_len <= buffer_size;
 }
@@ -212,9 +268,9 @@ static uint8_t utoa(uint16_t num, char *buffer)
   len += 2 - is_single_digit;
 
 #ifdef __SSE2__
-  const __m128i vec = _mm_load_si128((__m128i*)tmp);
+  const __m128i vec = _mm_load_si128((__m128i *)tmp);
   const __m128i reversed_vec = _mm_shuffle_epi8(vec, _128_reverse_mask);
-  _mm_store_si128((__m128i*)buffer, reversed_vec);
+  _mm_storeu_si128((__m128i *)buffer, reversed_vec);
 #else
   uint8_t i = len;
   while (LIKELY(i--))

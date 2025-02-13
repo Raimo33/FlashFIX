@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 22:37:58                                                
+last edited: 2025-02-13 13:38:07                                                
 
 ================================================================================*/
 
@@ -156,7 +156,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 #ifdef __AVX2__
   while (LIKELY(buffer + 32 <= last))
   {
-    const __m256i chunk = _mm256_load_si256((__m256i*)buffer);
+    const __m256i chunk = _mm256_load_si256((__m256i *)buffer);
     const __m256i cmp = _mm256_cmpeq_epi8(chunk, _256_vec_ones);
     int32_t mask = _mm256_movemask_epi8(cmp);
 
@@ -178,7 +178,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 #ifdef __SSE2__
   while (LIKELY(buffer + 16 <= last))
   {
-    const __m128i chunk = _mm_load_si128((__m128i*)buffer);
+    const __m128i chunk = _mm_load_si128((__m128i *)buffer);
     const __m128i cmp = _mm_cmpeq_epi8(chunk, _128_vec_ones);
     int32_t mask = _mm_movemask_epi8(cmp);
 
@@ -316,14 +316,14 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
   {
     PREFETCHR(buffer + 64, 3);
   
-    const __m256i chunk = _mm256_load_si256((__m256i*)buffer);
+    const __m256i chunk = _mm256_load_si256((__m256i *)buffer);
 
     const __m256i cmp_soh     = _mm256_cmpeq_epi8(chunk, _256_vec_soh);
     const __m256i cmp_equals  = _mm256_cmpeq_epi8(chunk, _256_vec_equals);
 
     const __m256i cmp = _mm256_or_si256(cmp_soh, cmp_equals);
     const __m256i result = _mm256_andnot_si256(cmp, chunk);
-    _mm256_storeu_si256((__m256i*)buffer, result);
+    _mm256_storeu_si256((__m256i *)buffer, result);
   
     buffer += 32;
   }
@@ -334,14 +334,14 @@ static void tokenize_message(char *restrict buffer, const uint16_t buffer_size)
   {
     PREFETCHR(buffer + 32, 3);
   
-    const __m128i chunk = _mm_load_si128((__m128i*)buffer);
+    const __m128i chunk = _mm_load_si128((__m128i *)buffer);
 
     const __m128i cmp_soh     = _mm_cmpeq_epi8(chunk, _128_vec_soh);
     const __m128i cmp_equals  = _mm_cmpeq_epi8(chunk, _128_vec_equals);
 
     const __m128i cmp = _mm_or_si128(cmp_soh, cmp_equals);
     const __m128i result = _mm_andnot_si128(cmp, chunk);
-    _mm_storeu_si128((__m128i*)buffer, result);
+    _mm_storeu_si128((__m128i *)buffer, result);
   
     buffer += 16;
   }
