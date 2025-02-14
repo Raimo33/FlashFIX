@@ -5,12 +5,14 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-14 17:53:51                                                
+last edited: 2025-02-14 18:07:32                                                
 
 ================================================================================*/
 
+//TODO FLAMEGRAPH
+
 # define FIX_MAX_FIELDS 1024
-# define N_ITERATIONS 1,000,000
+# define N_ITERATIONS 1'000'000
 # define MEDIAN_TAG_LEN 2
 # define MEDIAN_VALUE_LEN 6
 

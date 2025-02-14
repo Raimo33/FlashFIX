@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-12 13:35:28                                                 
-last edited: 2025-02-12 13:35:28                                                
+last edited: 2025-02-14 18:07:32                                                
 
 ================================================================================*/
 
@@ -30,5 +30,7 @@ NOTE: this is a serializer, not a parser. It will not check if the message is co
 WARNING: this library expects the host to support unaligned memory access. 
 
 ***************************************************************************************/
+
+//TODO explore <stdbit.h> for bit manipulation
 
 #endif
