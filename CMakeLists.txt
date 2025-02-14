@@ -50,7 +50,6 @@ target_compile_options(flashfix_static PUBLIC
   -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops
 )
 
-
 install(TARGETS flashfix_shared flashfix_static
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -66,18 +65,8 @@ target_link_libraries(test_static flashfix_static)
 add_executable(test_shared tests/test.c)
 target_link_libraries(test_shared flashfix_shared)
 
-add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests_ran
-  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_static
-  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_shared
-  COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/tests_ran
-  DEPENDS test_static test_shared
-  COMMENT "Running tests with both static and shared libraries"
-)
-
 add_custom_target(run_tests ALL
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests_ran
-  COMMENT "Tests have been run"
+  COMMAND $<TARGET_FILE:test_static>
+  COMMAND $<TARGET_FILE:test_shared>
+  COMMENT "Running all tests (CTest completely disabled)"
 )
-
-add_custom_target(tests DEPENDS run_tests)

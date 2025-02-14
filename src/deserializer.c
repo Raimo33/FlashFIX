@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-13 22:29:54                                                
+last edited: 2025-02-14 17:53:51                                                
 
 ================================================================================*/
 
@@ -89,7 +89,7 @@ bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uin
 uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
-  
+  bzero(message, sizeof(ff_message_t));
   const char *const buffer_start = buffer;
   
   buffer += check_begin_string(buffer, &local_error);
@@ -238,7 +238,7 @@ static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restri
 {
   constexpr char begin_string_tag[] = FIX_BEGINSTRING "=" FIX_VERSION "\x01";
 
-  *error = FF_INVALID_MESSAGE * (*(uint16_t *)buffer != *(const uint16_t *)begin_string_tag);
+  *error = FF_INVALID_MESSAGE * !!memcmp(buffer, begin_string_tag, STR_LEN(begin_string_tag));
 
   return STR_LEN(begin_string_tag);
 }
@@ -247,7 +247,7 @@ static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *res
 {
   constexpr char body_length_tag[] = FIX_BODYLENGTH "=";
 
-  *error = FF_INVALID_MESSAGE * memcmp(buffer, body_length_tag, STR_LEN(body_length_tag));
+  *error = FF_INVALID_MESSAGE * !!memcmp(buffer, body_length_tag, STR_LEN(body_length_tag));
 
   return STR_LEN(body_length_tag);
 }
@@ -287,8 +287,6 @@ static inline uint16_t validate_message(const char *buffer_start, const uint16_t
 static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error)
 {
   const char *const end = buffer + buffer_size;
-
-  bzero(message, sizeof(ff_message_t));
 
   while (LIKELY(buffer < end))
   {

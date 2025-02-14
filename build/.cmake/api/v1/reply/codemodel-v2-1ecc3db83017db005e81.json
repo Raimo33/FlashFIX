@@ -7,7 +7,7 @@
 				{
 					"build" : ".",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-.-Debug-995d9e0278c3c2907632.json",
+					"jsonFile" : "directory-.-Debug-8071b0da564bcee18db6.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.10"
@@ -20,8 +20,7 @@
 						1,
 						2,
 						3,
-						4,
-						5
+						4
 					]
 				}
 			],
@@ -40,8 +39,7 @@
 						1,
 						2,
 						3,
-						4,
-						5
+						4
 					]
 				}
 			],
@@ -50,43 +48,36 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "flashfix_shared::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-flashfix_shared-Debug-425140b70bbf8b8859f9.json",
+					"jsonFile" : "target-flashfix_shared-Debug-7d1422cfcd5db9a334ed.json",
 					"name" : "flashfix_shared",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "flashfix_static::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-flashfix_static-Debug-bcc19bcef0cc51dc8ed1.json",
+					"jsonFile" : "target-flashfix_static-Debug-2fa55fe8f6317afef6c6.json",
 					"name" : "flashfix_static",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "run_tests::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-run_tests-Debug-7f9bc2a29b88b1edc208.json",
+					"jsonFile" : "target-run_tests-Debug-22e248c2436d7b656b85.json",
 					"name" : "run_tests",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "test_shared::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-test_shared-Debug-57afe63f137babb1559f.json",
+					"jsonFile" : "target-test_shared-Debug-82b8c6e1996ef49d16e9.json",
 					"name" : "test_shared",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "test_static::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-test_static-Debug-bbc7da18afa65f606900.json",
+					"jsonFile" : "target-test_static-Debug-56ca29ae00befa6b4c8a.json",
 					"name" : "test_static",
-					"projectIndex" : 0
-				},
-				{
-					"directoryIndex" : 0,
-					"id" : "tests::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-tests-Debug-c6cb7c336b75e35c7fab.json",
-					"name" : "tests",
 					"projectIndex" : 0
 				}
 			]
