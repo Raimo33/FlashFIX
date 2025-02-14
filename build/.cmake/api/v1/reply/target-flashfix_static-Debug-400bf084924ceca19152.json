@@ -1,8 +1,9 @@
 {
+	"archive" : {},
 	"artifacts" : 
 	[
 		{
-			"path" : "libflashfix.so"
+			"path" : "libflashfix.a"
 		}
 	],
 	"backtrace" : 1,
@@ -27,25 +28,25 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 26,
+				"line" : 40,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 53,
+				"line" : 52,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 33,
+				"line" : 45,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 27,
+				"line" : 41,
 				"parent" : 0
 			}
 		]
@@ -56,7 +57,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "-g -fPIC"
+					"fragment" : "-g"
 				},
 				{
 					"backtrace" : 3,
@@ -118,12 +119,6 @@
 					"fragment" : "-std=gnu2x"
 				}
 			],
-			"defines" : 
-			[
-				{
-					"define" : "flashfix_shared_EXPORTS"
-				}
-			],
 			"includes" : 
 			[
 				{
@@ -148,15 +143,11 @@
 			]
 		}
 	],
-	"id" : "flashfix_shared::@6890427a1f51a3e7e1df",
+	"id" : "flashfix_static::@6890427a1f51a3e7e1df",
 	"install" : 
 	{
 		"destinations" : 
 		[
-			{
-				"backtrace" : 2,
-				"path" : "lib"
-			},
 			{
 				"backtrace" : 2,
 				"path" : "lib"
@@ -167,19 +158,8 @@
 			"path" : "/usr/local"
 		}
 	},
-	"link" : 
-	{
-		"commandFragments" : 
-		[
-			{
-				"fragment" : "",
-				"role" : "flags"
-			}
-		],
-		"language" : "C"
-	},
-	"name" : "flashfix_shared",
-	"nameOnDisk" : "libflashfix.so",
+	"name" : "flashfix_static",
+	"nameOnDisk" : "libflashfix.a",
 	"paths" : 
 	{
 		"build" : ".",
@@ -218,5 +198,5 @@
 			"sourceGroupIndex" : 0
 		}
 	],
-	"type" : "SHARED_LIBRARY"
+	"type" : "STATIC_LIBRARY"
 }

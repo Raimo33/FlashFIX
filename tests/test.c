@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-14 17:53:51                                                
+last edited: 2025-02-15 00:17:29                                                
 
 ================================================================================*/
 
@@ -13,8 +13,9 @@ last edited: 2025-02-14 17:53:51
 #include <stdio.h>
 #include <string.h>
 
-# define mu_assert(message, test) do { if (!(test)) return message; } while (0)
-# define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
+#define mu_assert(message, test) do { if (!(test)) return message; } while (0)
+#define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
+#define static_assert _Static_assert
 
 int tests_run = 0;
 
@@ -477,7 +478,7 @@ static char *test_deserialize_normal_message(void)
 
 static char *test_deserialize_too_many_fields(void)
 {
-  _Static_assert(FIX_MAX_FIELDS == 64, "FIX_MAX_FIELDS must be 64 for this test to work");
+  static_assert(FIX_MAX_FIELDS == 64, "FIX_MAX_FIELDS must be 64 for this test to work");
 
   char buffer[] = 
     "8=FIX.4.4\x01"

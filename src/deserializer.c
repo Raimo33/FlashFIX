@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-14 17:53:51                                                
+last edited: 2025-02-15 00:17:29                                                
 
 ================================================================================*/
 
@@ -163,7 +163,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
     while (UNLIKELY(mask))
     {
-      const int32_t offset = __builtin_ctz(mask);
+      const int32_t offset = __builtin_ctz(mask); //TODO stdc_trailing_zeros(mask);
       const char *const candidate = buffer + offset;
 
       if (UNLIKELY(check_zero_equal_soh(candidate + 1)))
@@ -185,7 +185,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
     while (UNLIKELY(mask))
     {
-      const int32_t offset = __builtin_ctz(mask);
+      const int32_t offset = __builtin_ctz(mask); //TODO stdc_trailing_zeros(mask);
       const char *const candidate = buffer + offset;
 
       if (UNLIKELY(check_zero_equal_soh(candidate + 1)))
@@ -207,7 +207,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
     while (UNLIKELY(mask))
     {
-      const int32_t byte_offset = __builtin_ctzll(mask) >> 3;
+      const int32_t byte_offset = __builtin_ctzll(mask) >> 3; //TODO stdc_trailing_zeros(mask) >> 3;
       const char *const candidate = buffer + byte_offset;
 
       if (UNLIKELY(check_zero_equal_soh(candidate + 1)))

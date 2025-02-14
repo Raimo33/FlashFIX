@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-12 13:35:28                                                
+last edited: 2025-02-15 00:17:29                                                
 
 ================================================================================*/
 
@@ -47,6 +47,7 @@ undefined behaviour:
   - message with n_fields == 0
 
 it doesn't check:
+  - if the buffer is empty
   - if the message is correct
   - if there are duplicate tags
   - if the output buffer will be null terminated
@@ -79,6 +80,7 @@ undefined behaviour:
   - len > buffer_size
 
 it doesn't check:
+  - if the buffer is empty
   - if beginstring, bodylength and checksum are already present
   - if the message is correct
   - if there are duplicate tags

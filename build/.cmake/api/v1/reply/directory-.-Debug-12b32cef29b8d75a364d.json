@@ -17,13 +17,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 53,
+				"line" : 52,
 				"parent" : 0
 			},
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 58,
+				"line" : 57,
 				"parent" : 0
 			}
 		]
@@ -40,7 +40,7 @@
 				"libflashfix.so.1"
 			],
 			"targetId" : "flashfix_shared::@6890427a1f51a3e7e1df",
-			"targetIndex" : 0,
+			"targetIndex" : 2,
 			"targetInstallNamelink" : "skip",
 			"type" : "target"
 		},
@@ -53,7 +53,7 @@
 				"libflashfix.so"
 			],
 			"targetId" : "flashfix_shared::@6890427a1f51a3e7e1df",
-			"targetIndex" : 0,
+			"targetIndex" : 2,
 			"targetInstallNamelink" : "only",
 			"type" : "target"
 		},
@@ -66,7 +66,7 @@
 				"libflashfix.a"
 			],
 			"targetId" : "flashfix_static::@6890427a1f51a3e7e1df",
-			"targetIndex" : 1,
+			"targetIndex" : 3,
 			"type" : "target"
 		},
 		{

@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "test_shared"
+			"path" : "benchmark_static"
 		}
 	],
 	"backtrace" : 1,
@@ -25,13 +25,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 65,
+				"line" : 67,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 66,
+				"line" : 68,
 				"parent" : 0
 			}
 		]
@@ -130,10 +130,10 @@
 	[
 		{
 			"backtrace" : 2,
-			"id" : "flashfix_shared::@6890427a1f51a3e7e1df"
+			"id" : "flashfix_static::@6890427a1f51a3e7e1df"
 		}
 	],
-	"id" : "test_shared::@6890427a1f51a3e7e1df",
+	"id" : "benchmark_static::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -147,19 +147,20 @@
 				"role" : "flags"
 			},
 			{
-				"fragment" : "-Wl,-rpath,/home/claudio/Desktop/FlashFIX/build",
+				"backtrace" : 2,
+				"fragment" : "libflashfix.a",
 				"role" : "libraries"
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "libflashfix.so.1.0.0",
+				"fragment" : "-lm",
 				"role" : "libraries"
 			}
 		],
 		"language" : "C"
 	},
-	"name" : "test_shared",
-	"nameOnDisk" : "test_shared",
+	"name" : "benchmark_static",
+	"nameOnDisk" : "benchmark_static",
 	"paths" : 
 	{
 		"build" : ".",
@@ -180,7 +181,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "tests/test.c",
+			"path" : "tests/benchmark.c",
 			"sourceGroupIndex" : 0
 		}
 	],

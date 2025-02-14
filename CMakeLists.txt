@@ -37,7 +37,6 @@ target_compile_options(flashfix_shared PUBLIC
   -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops
 )
 
-
 add_library(flashfix_static STATIC ${FLASHFIX_SOURCES})
 target_include_directories(flashfix_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(flashfix_static PROPERTIES
@@ -65,8 +64,20 @@ target_link_libraries(test_static flashfix_static)
 add_executable(test_shared tests/test.c)
 target_link_libraries(test_shared flashfix_shared)
 
+add_executable(benchmark_static tests/benchmark.c)
+target_link_libraries(benchmark_static flashfix_static m)
+
+add_executable(benchmark_shared tests/benchmark.c)
+target_link_libraries(benchmark_shared flashfix_static m)
+
 add_custom_target(run_tests ALL
   COMMAND $<TARGET_FILE:test_static>
   COMMAND $<TARGET_FILE:test_shared>
   COMMENT "Running all tests (CTest completely disabled)"
+)
+
+add_custom_target(run_benchmarks
+  COMMAND $<TARGET_FILE:benchmark_static>
+  COMMAND $<TARGET_FILE:benchmark_shared>
+  COMMENT "Running all benchmarks"
 )
