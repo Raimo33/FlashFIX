@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 00:17:29                                                
+last edited: 2025-02-15 12:51:34                                                
 
 ================================================================================*/
 
@@ -120,10 +120,9 @@ error:
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
   const char *const last = buffer + buffer_size - STR_LEN(FIX_CHECKSUM "=000\x01");
-  constexpr uint8_t alignment = 64;
+  const char *const aligned_buffer = align_forward(buffer, 64);
 
-  uint8_t displacement = (const uintptr_t)buffer % alignment;
-  while (UNLIKELY(displacement-- && buffer < last))
+  while (UNLIKELY(buffer < aligned_buffer))
   {
     if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
       return buffer;

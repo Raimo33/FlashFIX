@@ -7,7 +7,7 @@
 				{
 					"build" : ".",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-.-Debug-12b32cef29b8d75a364d.json",
+					"jsonFile" : "directory-.-Debug-4b951b6890649b658ad9.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.10"
@@ -22,8 +22,7 @@
 						3,
 						4,
 						5,
-						6,
-						7
+						6
 					]
 				}
 			],
@@ -44,8 +43,7 @@
 						3,
 						4,
 						5,
-						6,
-						7
+						6
 					]
 				}
 			],
@@ -54,28 +52,28 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "benchmark_shared::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-benchmark_shared-Debug-f0ea60c4a9018543456f.json",
+					"jsonFile" : "target-benchmark_shared-Debug-283e038e1c1591c34c5a.json",
 					"name" : "benchmark_shared",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "benchmark_static::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-benchmark_static-Debug-78709a006761f5d54695.json",
+					"jsonFile" : "target-benchmark_static-Debug-5b1dcea521e684b30e6e.json",
 					"name" : "benchmark_static",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "flashfix_shared::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-flashfix_shared-Debug-2b64bd3a252ffb3d5868.json",
+					"jsonFile" : "target-flashfix_shared-Debug-e1ec59edcbb68d297b01.json",
 					"name" : "flashfix_shared",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "flashfix_static::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-flashfix_static-Debug-400bf084924ceca19152.json",
+					"jsonFile" : "target-flashfix_static-Debug-63e417c54ecfad1531ee.json",
 					"name" : "flashfix_static",
 					"projectIndex" : 0
 				},
@@ -88,22 +86,15 @@
 				},
 				{
 					"directoryIndex" : 0,
-					"id" : "run_tests::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-run_tests-Debug-e78ee962149a1f9e78ca.json",
-					"name" : "run_tests",
-					"projectIndex" : 0
-				},
-				{
-					"directoryIndex" : 0,
 					"id" : "test_shared::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-test_shared-Debug-f21eb6532a8de1f03552.json",
+					"jsonFile" : "target-test_shared-Debug-aba24debf139489a89b1.json",
 					"name" : "test_shared",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "test_static::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-test_static-Debug-9b7991179112686cff83.json",
+					"jsonFile" : "target-test_static-Debug-925cdeb0bae6b2f614fd.json",
 					"name" : "test_static",
 					"projectIndex" : 0
 				}

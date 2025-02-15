@@ -5,10 +5,11 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-15 00:17:29                                                
+last edited: 2025-02-15 12:51:34                                                
 
 ================================================================================*/
 
+//TODO different files for different menchmarks, stack vs heap, aligned vs unaligned, static vs shared, no sse, sse2, avx2, avx512
 //TODO FLAMEGRAPH
 
 #define FIX_MAX_FIELDS 1024
@@ -27,11 +28,14 @@ last edited: 2025-02-15 00:17:29
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-static void benchmark_serialize(void);
-static void benchmark_deserialize(void);
+static void benchmark_serialize_unaligned(void);
+static void benchmark_deserialize_unaligned(void);
 static void generate_message_structs(ff_message_t *messages);
 static void generate_message_buffers(char **buffers);
+static void free_message_buffers(char **buffers);
 static inline long long nanoseconds(struct timespec start, struct timespec end);
 static uint8_t compute_checksum(const char *buffer, const uint16_t len);
 static char *generate_random_body(const uint16_t n_fields, uint16_t *body_len);
@@ -48,22 +52,28 @@ int32_t main(void)
 
   static_assert(BUFFER_SIZE < UINT16_MAX, "MAX_BUFFER_SIZE must be less than UINT16_MAX");
 
-  benchmark_serialize();
-  benchmark_deserialize();
+  printf("Benchmarking FlashFIX with %d iterations per test...\n", N_ITERATIONS);
+
+  benchmark_serialize_unaligned();
+  benchmark_deserialize_unaligned();
   //TODO benchmark serialize+finalize
   //TODO benchmark is_full+deserialize
 
   return 0;
 }
 
-static void benchmark_serialize(void)
+//TODO two benchmarks, one aligned and one unaligned
+static void benchmark_serialize_unaligned(void)
 {
-  //TODO two benchmarks, one aligned and one unaligned
   ff_message_t *messages = calloc(FIX_MAX_FIELDS, sizeof(ff_message_t));
   generate_message_structs(messages);
-  char buffer[BUFFER_SIZE] = {0};
+  char buffer[BUFFER_SIZE] = {0}; //TODO force unalignment
   struct timespec start, end;
+  constexpr char filename[] = "benchmark_serialize_unaligned.csv";
+  printf("Running unaligned serialization benchmark, saving to %s...\n", filename);
+  const int fd = open(filename, O_TRUNC | O_CREAT | O_WRONLY, 0644); //TODO check for errors
 
+  dprintf(fd, "# of fields, avg time (ns), throughput (msg/s)\n");
   for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
   {
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -71,20 +81,26 @@ static void benchmark_serialize(void)
       ff_serialize(buffer, sizeof(buffer), &messages[i], NULL);
     clock_gettime(CLOCK_MONOTONIC, &end);
   
-    const double elapsed_seconds = nanoseconds(start, end) / 1e9;
-    const uint64_t throughput = (uint64_t)(N_ITERATIONS / elapsed_seconds);
-    printf("Serialize (unaligned) %d fields in %f seconds, throughput: %lu messages/s\n", i + 1, elapsed_seconds, throughput);
+    const double average_elapsed_ns = nanoseconds(start, end) / (double)N_ITERATIONS;
+    const uint64_t throughput = 1e9 / average_elapsed_ns;
+    dprintf(fd, "%d, %.2f, %lu\n", i + 1, average_elapsed_ns, throughput);
   }
+
+  close(fd);
 }
 
-static void benchmark_deserialize(void)
+//TODO two benchmarks, one aligned and one unaligned
+static void benchmark_deserialize_unaligned(void)
 {
-  //TODO two benchmarks, one aligned and one unaligned
-  char **messages = calloc(FIX_MAX_FIELDS * BUFFER_SIZE, sizeof(char *));
+  char **messages = calloc(FIX_MAX_FIELDS * BUFFER_SIZE, sizeof(char *)); //TODO check for errors, force unalignment
   generate_message_buffers(messages);
   ff_message_t message = {0};
   struct timespec start, end;
+  constexpr char filename[] = "benchmark_deserialize_unaligned.csv";
+  printf("Running unaligned deserialization benchmark, saving to %s...\n", filename);
+  const int fd = open(filename, O_TRUNC | O_CREAT | O_WRONLY, 0644); //TODO check for errors
 
+  dprintf(fd, "# of fields, avg time (ns), throughput (msg/s)\n");
   for (uint32_t i = 0; i < FIX_MAX_FIELDS; i++)
   {
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -92,10 +108,13 @@ static void benchmark_deserialize(void)
       ff_deserialize(messages[i], sizeof(messages[i]), &message, NULL);
     clock_gettime(CLOCK_MONOTONIC, &end);
   
-    const double elapsed_seconds = nanoseconds(start, end) / 1e9;
-    const uint64_t throughput = (uint64_t)(N_ITERATIONS / elapsed_seconds);
-    printf("Deserialize (unaligned) %d fields in %f seconds, throughput: %lu messages/s\n", i + 1, elapsed_seconds, throughput);
+    const double average_elapsed_ns = nanoseconds(start, end) / (double)N_ITERATIONS;
+    const uint64_t throughput = 1e9 / average_elapsed_ns;
+    dprintf(fd, "%d, %.2f, %lu\n", i + 1, average_elapsed_ns, throughput);
   }
+
+  close(fd);
+  free_message_buffers(messages);
 }
 
 static void generate_message_structs(ff_message_t *messages)
@@ -132,12 +151,19 @@ static void generate_message_buffers(char **buffers)
       len = asprintf(&full_message, "%s10=%03d%c", body_and_header, checksum, '\x01');
     } while (len > BUFFER_SIZE);
 
-    sprintf(buffers[i], "%s", full_message);
+    asprintf(&buffers[i], "%s", full_message);
   }
 
   free(body);
   free(body_and_header);
   free(full_message);
+}
+
+static void free_message_buffers(char **buffers)
+{
+  for (uint32_t i = 0; i < FIX_MAX_FIELDS; i++)
+    free(buffers[i]);
+  free(buffers);
 }
 
 static inline long long nanoseconds(struct timespec start, struct timespec end)
@@ -155,7 +181,7 @@ static uint8_t compute_checksum(const char *buffer, const uint16_t len)
 
 static char *generate_random_body(const uint16_t n_fields, uint16_t *body_len)
 {
-  char *body;
+  char *body = NULL;
   uint16_t len = 0;
 
   for (uint16_t i = 0; i < n_fields; i++)

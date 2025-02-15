@@ -27,25 +27,25 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 26,
+				"line" : 34,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 52,
+				"line" : 50,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 33,
+				"line" : 41,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 27,
+				"line" : 35,
 				"parent" : 0
 			}
 		]
@@ -60,59 +60,7 @@
 				},
 				{
 					"backtrace" : 3,
-					"fragment" : "-Wall"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-Wextra"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-Werror"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-Wpedantic"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fwrapv"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fno-strict-aliasing"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-Ofast"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-march=native"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fno-plt"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fno-stack-protector"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fno-semantic-interposition"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fno-asynchronous-unwind-tables"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-fomit-frame-pointer"
-				},
-				{
-					"backtrace" : 3,
-					"fragment" : "-funroll-loops"
+					"fragment" : "-g"
 				},
 				{
 					"fragment" : "-std=gnu2x"

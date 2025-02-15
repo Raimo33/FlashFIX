@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "benchmark_static"
+			"path" : "benchmark_shared"
 		}
 	],
 	"backtrace" : 1,
@@ -11,7 +11,8 @@
 		"commands" : 
 		[
 			"add_executable",
-			"target_link_libraries"
+			"target_link_libraries",
+			"target_compile_options"
 		],
 		"files" : 
 		[
@@ -25,13 +26,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 67,
+				"line" : 69,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 68,
+				"line" : 70,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 71,
 				"parent" : 0
 			}
 		]
@@ -45,60 +52,12 @@
 					"fragment" : "-g"
 				},
 				{
-					"backtrace" : 2,
-					"fragment" : "-Wall"
+					"backtrace" : 3,
+					"fragment" : "-g"
 				},
 				{
-					"backtrace" : 2,
-					"fragment" : "-Wextra"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-Werror"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-Wpedantic"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fwrapv"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fno-strict-aliasing"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-Ofast"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-march=native"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fno-plt"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fno-stack-protector"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fno-semantic-interposition"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fno-asynchronous-unwind-tables"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-fomit-frame-pointer"
-				},
-				{
-					"backtrace" : 2,
-					"fragment" : "-funroll-loops"
+					"backtrace" : 3,
+					"fragment" : "-flto"
 				},
 				{
 					"fragment" : "-std=gnu2x"
@@ -133,7 +92,7 @@
 			"id" : "flashfix_static::@6890427a1f51a3e7e1df"
 		}
 	],
-	"id" : "benchmark_static::@6890427a1f51a3e7e1df",
+	"id" : "benchmark_shared::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -159,8 +118,8 @@
 		],
 		"language" : "C"
 	},
-	"name" : "benchmark_static",
-	"nameOnDisk" : "benchmark_static",
+	"name" : "benchmark_shared",
+	"nameOnDisk" : "benchmark_shared",
 	"paths" : 
 	{
 		"build" : ".",

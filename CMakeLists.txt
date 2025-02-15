@@ -23,6 +23,13 @@ set(FLASHFIX_PUBLIC_HEADERS
   include/flashfix/serializer.h
 )
 
+set(FLASHFIX_COMPILE_OPTIONS
+  -Wall -Wextra -Werror -Wpedantic
+  -fwrapv -fno-strict-aliasing -Ofast -march=native
+  -fno-semantic-interposition -fno-stack-protector -fno-plt 
+  -fno-asynchronous-unwind-tables -funroll-loops -fomit-frame-pointer
+)
+
 add_library(flashfix_shared SHARED ${FLASHFIX_SOURCES})
 target_include_directories(flashfix_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(flashfix_shared PROPERTIES
@@ -30,24 +37,14 @@ set_target_properties(flashfix_shared PROPERTIES
   SOVERSION ${FLASHFIX_VERSION_MAJOR}
   OUTPUT_NAME flashfix
 )
-target_compile_options(flashfix_shared PUBLIC
-  -Wall -Wextra -Werror -Wpedantic
-  -fwrapv -fno-strict-aliasing -Ofast -march=native
-  -fno-plt -fno-stack-protector -fno-semantic-interposition
-  -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops
-)
+target_compile_options(flashfix_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS})
 
 add_library(flashfix_static STATIC ${FLASHFIX_SOURCES})
 target_include_directories(flashfix_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(flashfix_static PROPERTIES
   OUTPUT_NAME flashfix
 )
-target_compile_options(flashfix_static PUBLIC
-  -Wall -Wextra -Werror -Wpedantic
-  -fwrapv -fno-strict-aliasing -Ofast -march=native
-  -fno-plt -fno-stack-protector -fno-semantic-interposition
-  -fno-asynchronous-unwind-tables -fomit-frame-pointer -funroll-loops
-)
+target_compile_options(flashfix_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS})
 
 install(TARGETS flashfix_shared flashfix_static
   ARCHIVE DESTINATION lib
@@ -66,9 +63,11 @@ target_link_libraries(test_shared flashfix_shared)
 
 add_executable(benchmark_static tests/benchmark.c)
 target_link_libraries(benchmark_static flashfix_static m)
+target_compile_options(benchmark_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto -g)
 
 add_executable(benchmark_shared tests/benchmark.c)
 target_link_libraries(benchmark_shared flashfix_static m)
+target_compile_options(benchmark_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto -g)
 
 add_custom_target(run_tests ALL
   COMMAND $<TARGET_FILE:test_static>
