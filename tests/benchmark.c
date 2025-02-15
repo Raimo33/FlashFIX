@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-15 17:33:44                                                
+last edited: 2025-02-15 21:59:42                                                
 
 ================================================================================*/
 
@@ -13,13 +13,12 @@ last edited: 2025-02-15 17:33:44
 //TODO check for file errors
 //TODO check for malloc errors
 
-#define FIX_MAX_FIELDS 1024
-#define N_ITERATIONS 1
+#define N_ITERATIONS 1'000'000
 #define MEAN_TAG_LEN 2
 #define MEAN_VALUE_LEN 6
 #define MAX_TAG_LEN 5
 #define MAX_VALUE_LEN 1024
-#define BUFFER_SIZE (MEAN_TAG_LEN + MEAN_VALUE_LEN + 2) * (FIX_MAX_FIELDS + 3)
+#define BUFFER_SIZE (MEAN_TAG_LEN + MEAN_VALUE_LEN + 2) * (FIX_MAX_FIELDS + 3) //TODO could be surpassed by a lot in rare random cases
 #define ALIGNMENT 64
 #define static_assert _Static_assert
 
@@ -27,11 +26,11 @@ last edited: 2025-02-15 17:33:44
 #include <flashfix.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <immintrin.h>
 
 static void init_unaligned_random_tags(char **tags, uint16_t *tag_lens);
 static void init_unaligned_random_values(char **values, uint16_t *value_lens);
@@ -60,22 +59,22 @@ int32_t main(void)
 
   static_assert(BUFFER_SIZE < UINT16_MAX, "MAX_BUFFER_SIZE must be less than UINT16_MAX");
 
-  char **unaligned_tags = malloc(FIX_MAX_FIELDS * sizeof(char *));
-  char **unaligned_values = malloc(FIX_MAX_FIELDS * sizeof(char *));
-  // char **aligned_tags = malloc(FIX_MAX_FIELDS * sizeof(char *));
-  // char **aligned_values = malloc(FIX_MAX_FIELDS * sizeof(char *));
-  uint16_t *tag_lens = malloc(FIX_MAX_FIELDS * sizeof(uint16_t));
-  uint16_t *value_lens = malloc(FIX_MAX_FIELDS * sizeof(uint16_t));
+  char **unaligned_tags = calloc(FIX_MAX_FIELDS, sizeof(char *));
+  char **unaligned_values = calloc(FIX_MAX_FIELDS, sizeof(char *));
+  // char **aligned_tags = calloc(FIX_MAX_FIELDS, sizeof(char *));
+  // char **aligned_values = calloc(FIX_MAX_FIELDS, sizeof(char *));
+  uint16_t *tag_lens = calloc(FIX_MAX_FIELDS, sizeof(uint16_t));
+  uint16_t *value_lens = calloc(FIX_MAX_FIELDS, sizeof(uint16_t));
 
   init_unaligned_random_tags(unaligned_tags, tag_lens);
   init_unaligned_random_values(unaligned_values, value_lens);
   // init_aligned_random_tags(aligned_tags, tag_lens);
   // init_aligned_random_values(aligned_values, value_lens);
 
-  ff_message_t *unaligned_message_structs = malloc(FIX_MAX_FIELDS * sizeof(ff_message_t));
-  // ff_message_t *aligned_message_structs = malloc(FIX_MAX_FIELDS * sizeof(ff_message_t));
-  // char **unaligned_message_buffers = malloc(FIX_MAX_FIELDS * sizeof(char *));
-  // char **aligned_message_buffers = malloc(FIX_MAX_FIELDS * sizeof(char *));
+  ff_message_t *unaligned_message_structs = calloc(FIX_MAX_FIELDS, sizeof(ff_message_t));
+  // ff_message_t *aligned_message_structs = calloc(FIX_MAX_FIELDS, sizeof(ff_message_t));
+  // char **unaligned_message_buffers = calloc(FIX_MAX_FIELDS, sizeof(char *));
+  // char **aligned_message_buffers = calloc(FIX_MAX_FIELDS, sizeof(char *));
 
   fill_message_structs(unaligned_message_structs, unaligned_tags, unaligned_values, tag_lens, value_lens);
   // fill_message_structs(aligned_message_structs, aligned_tags, aligned_values, tag_lens, value_lens);
@@ -136,20 +135,19 @@ static void unaligned_serialize(ff_message_t *messages)
   printf("Running unaligned serialization benchmark, saving to %s...\n", filename);
   const int fd = open(filename, O_TRUNC | O_CREAT | O_WRONLY, 0644);
   
-  struct timespec start, end;
+  uint64_t start, end;
+  uint32_t aux;
 
-  dprintf(fd, "# of fields, avg time (ns), throughput (msg/s)\n");
+  dprintf(fd, "# of fields, # of cpu cycles\n");
   for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
   {
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
       ff_serialize(unaligned_buffer, buffer_size, &messages[i], NULL);
-    printf("message.n_fields: %d\n", messages[i].n_fields);
-    clock_gettime(CLOCK_MONOTONIC, &end);
+    end = __rdtscp(&aux);
   
-    const double average_elapsed_ns = nanoseconds(start, end) / (double)N_ITERATIONS;
-    const uint64_t throughput = 1e9 / average_elapsed_ns;
-    dprintf(fd, "%d, %.2f, %lu\n", i + 1, average_elapsed_ns, throughput);
+    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
+    dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
   }
 
   close(fd);
@@ -157,16 +155,17 @@ static void unaligned_serialize(ff_message_t *messages)
 
 static void fill_message_structs(ff_message_t *messages, char **tags, char **values, uint16_t *tag_lens, uint16_t *value_lens)
 {
-  for (uint32_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
   {
-    for (uint32_t j = 0; j <= i; j++)
+    messages[i].n_fields = i + 1;
+
+    for (uint16_t j = 0; j <= i; j++)
     {
       messages[i].fields[j].tag = tags[j];
       messages[i].fields[j].tag_len = tag_lens[j];
       messages[i].fields[j].value = values[j];
       messages[i].fields[j].value_len = value_lens[j];
     }
-    messages[i].n_fields = i + 1;
   }
 }
 
@@ -184,7 +183,7 @@ static char *generate_unaligned_random_string(const char *charset, const uint8_t
 {
   uint16_t len = gaussian_rand(median_len, 1);
   len = clamp(len, 1, max_len);
-  char *str = malloc(len + 1);
+  char *str = calloc(len + 1, sizeof(char));
 
   for (uint16_t i = 0; i < len; i++)
     str[i] = charset[rand() % charset_len];

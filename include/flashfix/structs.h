@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-02-15 17:33:44                                                
+last edited: 2025-02-15 21:59:42                                                
 
 ================================================================================*/
 
@@ -25,6 +25,8 @@ typedef struct
   char *tag;
   char *value;
 } ff_field_t;
+
+//TODO SOA (Struct of Arrays): https://en.wikipedia.org/wiki/AoS_and_SoA
 
 typedef struct
 {

@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 17:33:44                                                
+last edited: 2025-02-15 21:59:42                                                
 
 ================================================================================*/
 
@@ -172,11 +172,11 @@ error:
   (void)(error && (*error = local_error));
   return 0;
 }
-#include <stdio.h>
+
 static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size)
 {
   uint16_t total_len = (message->n_fields << 1);
-  uint8_t i = 0;
+  uint16_t i = 0;
 
 #ifdef __AVX512F__
   while (LIKELY(i + 16 < message->n_fields))
@@ -198,10 +198,6 @@ static bool message_fits_in_buffer(const ff_message_t *restrict message, const u
     total_len += message->fields[i].tag_len + message->fields[i].value_len;
     i++;
   }
-
-  printf("total_len: %d\n", total_len);
-  printf("buffer_size: %d\n", buffer_size);
-  printf("message->n_fields: %d\n", message->n_fields);
 
   return total_len <= buffer_size;
 }

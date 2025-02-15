@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 12:51:34                                                
+last edited: 2025-02-15 21:59:42                                                
 
 ================================================================================*/
 
@@ -15,10 +15,9 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
 {
   const char *const end = buffer + len;
   uint8_t checksum = 0;
-  constexpr uint8_t alignment = 64;
+  const char *aligned_buffer = align_forward(buffer, 64);
 
-  uint8_t displacement = (const uintptr_t)buffer % alignment;
-  while (UNLIKELY(displacement-- && buffer < end))
+  while (UNLIKELY(buffer < aligned_buffer))
     checksum += *buffer++;
 
 #ifdef __AVX512F__

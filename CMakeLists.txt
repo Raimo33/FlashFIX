@@ -24,7 +24,7 @@ set(FLASHFIX_PUBLIC_HEADERS
 )
 
 set(FLASHFIX_COMPILE_OPTIONS
-  -Wall -Wextra -Werror -Wpedantic -g
+  -Wall -Wextra -Werror -Wpedantic
   -fwrapv -fno-strict-aliasing -Ofast -march=native
   -fno-semantic-interposition -fno-stack-protector -fno-plt 
   -fno-asynchronous-unwind-tables -funroll-loops -fomit-frame-pointer
@@ -69,12 +69,13 @@ add_executable(benchmark_shared tests/benchmark.c)
 target_link_libraries(benchmark_shared flashfix_static m)
 target_compile_options(benchmark_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
 
-add_custom_target(run_tests ALL
+add_custom_target(run_tests
   COMMAND $<TARGET_FILE:test_static>
   COMMAND $<TARGET_FILE:test_shared>
   COMMENT "Running all tests (CTest completely disabled)"
 )
 
+#TODO: use perf, generate unified flamegraph and python plots for each csv file
 add_custom_target(run_benchmarks
   COMMAND $<TARGET_FILE:benchmark_static>
   COMMAND $<TARGET_FILE:benchmark_shared>
