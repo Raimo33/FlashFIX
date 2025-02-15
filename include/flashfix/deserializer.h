@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 00:17:29                                                
+last edited: 2025-02-15 17:33:44                                                
 
 ================================================================================*/
 
@@ -79,12 +79,14 @@ outputs:
 undefined behaviour:
   - buffer is NULL
   - message is NULL
+  - message->n_fields > FIX_MAX_FIELDS
   - buffer_size is different from the actual size of the buffer
   - buffer does not contain the full message
   - message is not full (missing checksum)
 
 it doesn't check:
   - if the buffer is empty
+  - if message->n_fields is different from the actual number of fields
   - if there are duplicate tags
   - if tags are in the correct order
   - if tags are part of the FIX standard 

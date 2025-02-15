@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-02-13 13:38:07                                                
+last edited: 2025-02-15 17:33:44                                                
 
 ================================================================================*/
 
@@ -20,16 +20,16 @@ last edited: 2025-02-13 13:38:07
 
 typedef struct
 {
-  uint16_t tag_len;
+  uint16_t tag_len; //TODO uint8_t
   uint16_t value_len;
-  const char *tag;
-  const char *value;
+  char *tag;
+  char *value;
 } ff_field_t;
 
 typedef struct
 {
   ff_field_t fields[FIX_MAX_FIELDS];
-  uint8_t n_fields;
+  uint16_t n_fields;
 } ff_message_t;
 
 #endif

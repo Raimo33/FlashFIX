@@ -1,15 +1,11 @@
-/*================================================================================
-
-File: plot_csv.py                                                               
-Creator: Claudio Raimondi                                                       
-Email: claudio.raimondi@pm.me                                                   
-
-created at: 2025-02-15 12:51:34                                                 
-last edited: 2025-02-15 12:51:34                                                
-
-================================================================================*/
-
-#TODO write it in C
+#================================================================================
+# File: plot_csv.py                                                               
+# Creator: Claudio Raimondi                                                       
+# Email: claudio.raimondi@pm.me                                                   
+# 
+# created at: 2025-02-15 17:33:44                                                 
+# last edited: 2025-02-15 17:33:44                                                
+#================================================================================
 
 import pandas as pd
 import matplotlib.pyplot as plt

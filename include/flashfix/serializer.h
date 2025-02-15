@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 00:17:29                                                
+last edited: 2025-02-15 17:33:44                                                
 
 ================================================================================*/
 
@@ -38,6 +38,7 @@ undefined behaviour:
   - message is NULL
   - value_len and tag_len are different from the actual length of the value and tag
   - n_fields is different from the actual number of fields in the message
+  - the same message pointer is used with different data
   - non printable characters
   - buffer size is different from the actual size of the buffer
   - message with NULL fields

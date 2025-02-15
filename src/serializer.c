@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-13 18:56:52                                                
+last edited: 2025-02-15 17:33:44                                                
 
 ================================================================================*/
 
@@ -53,7 +53,7 @@ CONSTRUCTOR void ff_serializer_init(void)
 #endif
 }
 
-uint16_t ff_serialize(char *buffer, const uint16_t buffer_size, const ff_message_t *message, ff_error_t *restrict error)
+uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const ff_message_t *restrict message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
 
@@ -172,7 +172,7 @@ error:
   (void)(error && (*error = local_error));
   return 0;
 }
-
+#include <stdio.h>
 static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size)
 {
   uint16_t total_len = (message->n_fields << 1);
@@ -198,6 +198,10 @@ static bool message_fits_in_buffer(const ff_message_t *restrict message, const u
     total_len += message->fields[i].tag_len + message->fields[i].value_len;
     i++;
   }
+
+  printf("total_len: %d\n", total_len);
+  printf("buffer_size: %d\n", buffer_size);
+  printf("message->n_fields: %d\n", message->n_fields);
 
   return total_len <= buffer_size;
 }

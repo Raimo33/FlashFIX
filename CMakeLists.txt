@@ -24,7 +24,7 @@ set(FLASHFIX_PUBLIC_HEADERS
 )
 
 set(FLASHFIX_COMPILE_OPTIONS
-  -Wall -Wextra -Werror -Wpedantic
+  -Wall -Wextra -Werror -Wpedantic -g
   -fwrapv -fno-strict-aliasing -Ofast -march=native
   -fno-semantic-interposition -fno-stack-protector -fno-plt 
   -fno-asynchronous-unwind-tables -funroll-loops -fomit-frame-pointer
@@ -63,11 +63,11 @@ target_link_libraries(test_shared flashfix_shared)
 
 add_executable(benchmark_static tests/benchmark.c)
 target_link_libraries(benchmark_static flashfix_static m)
-target_compile_options(benchmark_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto -g)
+target_compile_options(benchmark_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
 
 add_executable(benchmark_shared tests/benchmark.c)
 target_link_libraries(benchmark_shared flashfix_static m)
-target_compile_options(benchmark_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto -g)
+target_compile_options(benchmark_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
 
 add_custom_target(run_tests ALL
   COMMAND $<TARGET_FILE:test_static>
