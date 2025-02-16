@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-16 19:07:50                                                
+last edited: 2025-02-16 22:54:38                                                
 
 ================================================================================*/
 
@@ -13,7 +13,6 @@ last edited: 2025-02-16 19:07:50
 #include <flashfix/serializer.h>
 #include <string.h>
 
-static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size);
 static uint8_t utoa(uint16_t num, char *buffer);
 ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
 ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
@@ -52,18 +51,41 @@ CONSTRUCTOR void ff_serializer_init(void)
   _128_reverse_mask  = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #endif
 }
-#include <stdio.h>
-uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const ff_message_t *restrict message, ff_error_t *restrict error)
+
+bool ff_message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size, UNUSED ff_error_t *restrict error)
 {
-  ff_error_t local_error = FF_OK;
+  uint32_t total_len = (message->n_fields << 1) + STR_LEN("8=FIX.4.4|9=00000|10=000|") + 1;
+  uint16_t i = 0;
 
-  const char *const buffer_start = buffer;
-
-  if (UNLIKELY(!message_fits_in_buffer(message, buffer_size)))
+#ifdef __AVX512F__
+  while (LIKELY(i + 16 < message->n_fields && total_len <= buffer_size))
   {
-    local_error = FF_BUFFER_TOO_SMALL;
-    goto error;
+    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, message->fields + i, sizeof(ff_field_t));
+
+    const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
+    const __m512i value_len = _mm512_srli_epi32(lengths, 16);
+
+    const __m512i sum = _mm512_add_epi32(tag_len, value_len);
+    total_len += _mm512_reduce_add_epi32(sum);
+
+    i += 16;
   }
+#endif
+
+//TODO: Implement AVX2 and SSE2 versions (they dont have reduce, so we need to use _mm256_extract_epi32 and _mm_extract_epi32)
+
+  while (LIKELY(i < message->n_fields && total_len <= buffer_size))
+  {
+    total_len += message->fields[i].tag_len + message->fields[i].value_len;
+    i++;
+  }
+  return total_len <= buffer_size;
+}
+
+//TODO speedup, much slower than deserialize
+uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message, UNUSED ff_error_t *restrict error)
+{
+  const char *const buffer_start = buffer;
 
   const ff_field_t *fields = message->fields;
   const uint16_t n_fields = message->n_fields;
@@ -80,41 +102,28 @@ uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const f
   }
 
   return buffer - buffer_start;
-
-error:
-  (void)(error && (*error = local_error));
-  return 0;
 }
 
-uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t len, ff_error_t *restrict error)
+uint16_t ff_finalize(char *buffer, const uint16_t len, UNUSED ff_error_t *restrict error)
 {
-  ff_error_t local_error = FF_OK;
-
   const char *const buffer_start = buffer;
 
   static const ff_field_t begin_string = {
-    .tag = FIX_BEGINSTRING,
-    .tag_len = STR_LEN(FIX_BEGINSTRING),
-    .value = FIX_VERSION,
-    .value_len = STR_LEN(FIX_VERSION)
+    .tag =  "8",
+    .tag_len = STR_LEN("8"),
+    .value = "FIX.4.4",
+    .value_len = STR_LEN("FIX.4.4")
   };
 
   char body_length_str[16] = {0};
   const ff_field_t body_length = {
-    .tag = FIX_BODYLENGTH,
-    .tag_len = STR_LEN(FIX_BODYLENGTH),
+    .tag = "9",
+    .tag_len = STR_LEN("9"),
     .value = body_length_str,
     .value_len = utoa(len, body_length_str)
   };
 
   const uint8_t added_len = begin_string.tag_len + 1 + begin_string.value_len + 1 + body_length.tag_len + 1 + body_length.value_len + 1;
-  const uint8_t checksum_len = STR_LEN(FIX_CHECKSUM) + 1 + 3 + 1;
-  if (UNLIKELY(len + added_len + checksum_len > buffer_size))
-  {
-    local_error = FF_BUFFER_TOO_SMALL;
-    goto error;
-  }
-
   memmove(buffer + added_len, buffer, len);
 
   const ff_message_t message = {
@@ -124,8 +133,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
     },
     .n_fields = 2
   };
-  ff_serialize(buffer, added_len, &message, &local_error);
-  if (UNLIKELY(local_error != FF_OK)) goto error;
+  ff_serialize(buffer, &message, error);
 
   buffer += added_len + len;
 
@@ -160,46 +168,13 @@ uint16_t ff_finalize(char *buffer, const uint16_t buffer_size, const uint16_t le
 
   const uint8_t checksum = compute_checksum(buffer_start, buffer - buffer_start);
 
-  memcpy(buffer, FIX_CHECKSUM, STR_LEN(FIX_CHECKSUM));
-  buffer += STR_LEN(FIX_CHECKSUM);
+  *(uint16_t *)(buffer) = *(uint16_t *)"10";
+  buffer += 2;
   *buffer++ = '=';
-  *(uint32_t *)buffer = *(const uint32_t *)checksum_table[checksum];
+  *(uint32_t *)buffer = *(uint32_t *)checksum_table[checksum];
   buffer += 4;
 
   return buffer - buffer_start;
-
-error:
-  (void)(error && (*error = local_error));
-  return 0;
-}
-
-static bool message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size)
-{
-  uint16_t total_len = (message->n_fields << 1);
-  uint16_t i = 0;
-
-#ifdef __AVX512F__
-  while (LIKELY(i + 16 < message->n_fields))
-  {
-    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, message->fields + i, sizeof(ff_field_t));
-
-    const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
-    const __m512i value_len = _mm512_srli_epi32(lengths, 16);
-
-    const __m512i sum = _mm512_add_epi32(tag_len, value_len);
-    total_len += _mm512_reduce_add_epi32(sum);
-
-    i += 16;
-  }
-#endif
-
-  while (LIKELY(i < message->n_fields))
-  {
-    total_len += message->fields[i].tag_len + message->fields[i].value_len;
-    i++;
-  }
-
-  return total_len <= buffer_size;
 }
 
 static uint8_t utoa(uint16_t num, char *buffer)
@@ -233,7 +208,7 @@ static uint8_t utoa(uint16_t num, char *buffer)
 
   const bool is_single_digit = num < 10;
   len += is_single_digit;
-  *(uint16_t *)(tmp + len - is_single_digit) = *(const uint16_t *)(digit_pairs_reverse + (num << 1));
+  *(uint16_t *)(tmp + len - is_single_digit) = *(uint16_t *)(digit_pairs_reverse + (num << 1));
   len += 2 - is_single_digit;
 
   uint8_t i = len;

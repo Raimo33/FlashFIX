@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-02-15 21:59:42                                                
+last edited: 2025-02-16 22:54:38                                                
 
 ================================================================================*/
 
@@ -15,12 +15,12 @@ last edited: 2025-02-15 21:59:42
 # include <stdint.h>
 
 # ifndef FIX_MAX_FIELDS
-#   define FIX_MAX_FIELDS 64
+#   define FIX_MAX_FIELDS 1024
 # endif
 
 typedef struct
 {
-  uint16_t tag_len; //TODO uint8_t
+  uint16_t tag_len;
   uint16_t value_len;
   char *tag;
   char *value;

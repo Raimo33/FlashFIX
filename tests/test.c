@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-15 00:17:29                                                
+last edited: 2025-02-16 22:54:38                                                
 
 ================================================================================*/
 
@@ -41,16 +41,16 @@ static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
 }
 
 static char *all_tests(void);
+static char *test_message_fits_in_buffer_positive(void);
+static char *test_message_fits_in_buffer_negative(void);
 static char *test_serialize_normal_message(void);
 static char *test_serialize_one_field_message(void);
-static char *test_serialize_buffer_too_small(void);
 static char *test_serialize_no_error_param(void);
 static char *test_finalize_normal_message(void);
-static char *test_finalize_buffer_too_small(void);
 static char *test_finalize_no_error_param(void);
 static char *test_is_full_normal_message_positive(void);
 static char *test_is_full_normal_message_negative(void);
-static char *test_is_full_buffer_too_small(void);
+static char *test_is_full_message_too_big(void);
 static char *test_is_full_no_error_param(void);
 static char *test_deserialize_normal_message(void);
 static char *test_deserialize_too_many_fields(void);
@@ -78,18 +78,19 @@ int main(void)
 
 static char *all_tests(void)
 {
+  mu_run_test(test_message_fits_in_buffer_positive);
+  mu_run_test(test_message_fits_in_buffer_negative);
+
   mu_run_test(test_serialize_normal_message);
   mu_run_test(test_serialize_one_field_message);
-  mu_run_test(test_serialize_buffer_too_small);
   mu_run_test(test_serialize_no_error_param);
 
   mu_run_test(test_finalize_normal_message);
-  mu_run_test(test_finalize_buffer_too_small);
   mu_run_test(test_finalize_no_error_param);
 
   mu_run_test(test_is_full_normal_message_positive);
   mu_run_test(test_is_full_normal_message_negative);
-  mu_run_test(test_is_full_buffer_too_small);
+  mu_run_test(test_is_full_message_too_big);
   mu_run_test(test_is_full_no_error_param);
 
   mu_run_test(test_deserialize_normal_message);
@@ -101,6 +102,58 @@ static char *all_tests(void)
   mu_run_test(test_deserialize_wrong_body_length1);
   mu_run_test(test_deserialize_wrong_body_length2);
   mu_run_test(test_deserialize_checksum_mismatch);
+
+  return 0;
+}
+
+static char *test_message_fits_in_buffer_positive(void)
+{
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  constexpr uint16_t buffer_size = 57 + 26 + 16;
+
+  ff_error_t error = FF_OK;
+  bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
+
+  mu_assert("error: message fits in buffer positive: wrong outcome", fits == true);
+  mu_assert("error: message fits in buffer positive: wrong error", error == FF_OK);
+
+  return 0;
+}
+
+static char *test_message_fits_in_buffer_negative(void)
+{
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  constexpr uint16_t buffer_size = 56 + 26 + 16;
+
+  ff_error_t error = FF_OK;
+  bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
+
+  mu_assert("error: message fits in buffer negative: wrong outcome", fits == false);
+  mu_assert("error: message fits in buffer negative: wrong error", error == FF_OK);
 
   return 0;
 }
@@ -134,7 +187,7 @@ static char *test_serialize_normal_message(void)
 
   char buffer[sizeof(expected_buffer)];
   ff_error_t error = FF_OK;
-  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_serialize(buffer, &message, &error);
 
   mu_assert("error: serialize normal message: wrong length", len == expected_len);
   mu_assert("error: serialize normal message: wrong error", error == expected_error);
@@ -157,41 +210,11 @@ static char *test_serialize_one_field_message(void)
 
   char buffer[sizeof(expected_buffer)];
   ff_error_t error = FF_OK;
-  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_serialize(buffer, &message, &error);
 
   mu_assert("error: serialize one field message: wrong length", len == expected_len);
   mu_assert("error: serialize one field message: wrong error", error == expected_error);
   mu_assert("error: serialize one field message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
-
-  return 0;
-}
-
-static char *test_serialize_buffer_too_small(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
-    .n_fields = 8
-  };
-  constexpr char expected_buffer[] = "";
-  constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_BUFFER_TOO_SMALL;
-
-  char buffer[sizeof(expected_buffer)] = {0};
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, &error);
-
-  mu_assert("error: serialize buffer too small: wrong length", len == expected_len);
-  mu_assert("error: serialize buffer too small: wrong error", error == expected_error);
-  mu_assert("error: serialize buffer too small: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
 
   return 0;
 }
@@ -221,7 +244,7 @@ static char *test_serialize_no_error_param(void)
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
   char buffer[sizeof(expected_buffer)];
-  uint16_t len = ff_serialize(buffer, sizeof(buffer), &message, NULL);
+  uint16_t len = ff_serialize(buffer, &message, NULL);
 
   mu_assert("error: serialize no error param: wrong length", len == expected_len);
   mu_assert("error: serialize no error param: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
@@ -253,45 +276,11 @@ static char *test_finalize_normal_message(void)
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
   ff_error_t error = FF_OK;
-  uint16_t len = ff_finalize(buffer, sizeof(buffer), strlen(buffer), &error);
+  uint16_t len = ff_finalize(buffer, strlen(buffer), &error);
 
   mu_assert("error: finalize normal message: wrong length", len == expected_len);
   mu_assert("error: finalize normal message: wrong error", error == FF_OK);
   mu_assert("error: finalize normal message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
-
-  return 0;
-}
-
-static char *test_finalize_buffer_too_small(void)
-{
-  constexpr char expected_buffer[] = 
-    "8=FIX.4.4\x01"
-    "9=67\x01"
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01"
-    "10=120\x01";
-  char buffer[sizeof(expected_buffer) - 2] =
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01";
-  constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_BUFFER_TOO_SMALL;
-
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_finalize(buffer, sizeof(buffer), strlen(buffer), &error);
-
-  mu_assert("error: finalize buffer too small: wrong length", len == expected_len);
-  mu_assert("error: finalize buffer too small: wrong error", error == expected_error);
-  mu_assert("error: finalize buffer too small: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
 
   return 0;
 }
@@ -319,7 +308,7 @@ static char *test_finalize_no_error_param(void)
     "108=30\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
-  uint16_t len = ff_finalize(buffer, sizeof(buffer), strlen(buffer), NULL);
+  uint16_t len = ff_finalize(buffer, strlen(buffer), NULL);
 
   mu_assert("error: finalize normal message: wrong length", len == expected_len);
   mu_assert("error: finalize normal message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
@@ -344,7 +333,7 @@ static char *test_is_full_normal_message_positive(void)
   constexpr ff_error_t expected_error = FF_OK;
 
   ff_error_t error = FF_OK;
-  bool is_full = ff_is_full(buffer, sizeof(buffer), len, &error);
+  bool is_full = ff_is_full_message(buffer, sizeof(buffer), len, &error);
 
   mu_assert("error: is_full normal message positive: wrong error", error == expected_error);
   mu_assert("error: is_full normal message positive: wrong is_full", is_full == true);
@@ -380,7 +369,7 @@ static char *test_is_full_normal_message_negative(void)
   constexpr ff_error_t expected_error = FF_OK;
 
   ff_error_t error = FF_OK;
-  bool is_full = ff_is_full(buffer, sizeof(buffer), len, &error);
+  bool is_full = ff_is_full_message(buffer, sizeof(buffer), len, &error);
 
   mu_assert("error: is_full normal message negative: wrong error", error == expected_error);
   mu_assert("error: is_full normal message negative: wrong is_full", is_full == false);
@@ -388,7 +377,7 @@ static char *test_is_full_normal_message_negative(void)
   return 0;
 }
 
-static char *test_is_full_buffer_too_small(void)
+static char *test_is_full_message_too_big(void)
 {
   constexpr char buffer[] = 
     "8=FIX.4.4\x01"
@@ -404,13 +393,13 @@ static char *test_is_full_buffer_too_small(void)
   constexpr uint16_t len = sizeof(buffer) - 1;
   constexpr uint16_t simulated_buffer_size = sizeof(buffer) - 1;
 
-  constexpr ff_error_t expected_error = FF_BUFFER_TOO_SMALL;
+  constexpr ff_error_t expected_error = FF_MESSAGE_TOO_BIG;
 
   ff_error_t error = FF_OK;
-  bool is_full = ff_is_full(buffer, simulated_buffer_size, len, &error);
+  bool is_full = ff_is_full_message(buffer, simulated_buffer_size, len, &error);
 
-  mu_assert("error: is_full buffer too small: wrong error", error == expected_error);
-  mu_assert("error: is_full buffer too small: wrong is_full", is_full == false);
+  mu_assert("error: is_full message too big: wrong error", error == expected_error);
+  mu_assert("error: is_full message too big: wrong is_full", is_full == false);
 
   return 0;
 }
@@ -430,7 +419,7 @@ static char *test_is_full_no_error_param(void)
     "10=120\x01";
   constexpr uint16_t len = sizeof(buffer) - 1;
 
-  bool is_full = ff_is_full(buffer, sizeof(buffer), len, NULL);
+  bool is_full = ff_is_full_message(buffer, sizeof(buffer), len, NULL);
 
   mu_assert("error: is_full no error param: wrong is_full", is_full == true);
 

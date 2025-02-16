@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 17:33:44                                                
+last edited: 2025-02-16 22:54:38                                                
 
 ================================================================================*/
 
@@ -69,18 +69,18 @@ CONSTRUCTOR void ff_deserializer_init(void)
 #endif
 }
 
-bool ff_is_full(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
+bool ff_is_full_message(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
 {
-  constexpr uint8_t checksum_len = STR_LEN(FIX_CHECKSUM "=000\x01");
-  constexpr uint8_t begin_string_len = STR_LEN(FIX_BEGINSTRING "=" FIX_VERSION "\x01");
-  constexpr uint8_t body_length_len = STR_LEN(FIX_BODYLENGTH "=") + 2;
-  constexpr uint8_t total_minimum_len = checksum_len + begin_string_len + body_length_len;
+  constexpr uint8_t begin_string_len = STR_LEN("8=FIX.4.4\x01");
+  constexpr uint8_t min_body_length_len = STR_LEN("9=0\x01");
+  constexpr uint8_t checksum_len = STR_LEN("10=000\x01");
+  constexpr uint8_t total_minimum_len = checksum_len + begin_string_len + min_body_length_len;
 
   if (message_len < total_minimum_len)
     return false;
 
   const bool has_checksum = !!get_checksum_start(buffer, message_len);
-  (void)(error && (*error = FF_BUFFER_TOO_SMALL * (!has_checksum && message_len >= buffer_size)));
+  (void)(error && (*error = FF_MESSAGE_TOO_BIG * (!has_checksum && message_len >= buffer_size)));
 
   return has_checksum;
 }
@@ -120,7 +120,7 @@ error:
 //TODO optimize, bottleneck
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
-  const char *const last = buffer + buffer_size - STR_LEN(FIX_CHECKSUM "=000\x01");
+  const char *const last = buffer + buffer_size - STR_LEN("10=000\x01");
   const char *const aligned_buffer = align_forward(buffer, 64);
 
   while (UNLIKELY(buffer < aligned_buffer))
@@ -231,12 +231,12 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
 static inline bool check_zero_equal_soh(const char *buffer)
 {
-  return *(const uint16_t *)(buffer) == *(const uint16_t *)"0=" && buffer[5] == '\x01';
+  return *(uint16_t *)(buffer) == *(uint16_t *)"0=" && buffer[5] == '\x01';
 }
 
 static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restrict error)
 {
-  constexpr char begin_string_tag[] = FIX_BEGINSTRING "=" FIX_VERSION "\x01";
+  constexpr char begin_string_tag[] = "8=FIX.4.4\x01";
 
   *error = FF_INVALID_MESSAGE * !!memcmp(buffer, begin_string_tag, STR_LEN(begin_string_tag));
 
@@ -245,9 +245,9 @@ static inline uint16_t check_begin_string(const char *buffer, ff_error_t *restri
 
 static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *restrict error)
 {
-  constexpr char body_length_tag[] = FIX_BODYLENGTH "=";
+  constexpr char body_length_tag[] = "9=";
 
-  *error = FF_INVALID_MESSAGE * !!memcmp(buffer, body_length_tag, STR_LEN(body_length_tag));
+  *error = FF_INVALID_MESSAGE * (*(uint16_t *)buffer != *(uint16_t *)body_length_tag);
 
   return STR_LEN(body_length_tag);
 }
@@ -270,7 +270,7 @@ static inline uint16_t validate_message(const char *buffer_start, const uint16_t
   const char *buffer = get_checksum_start(body_start, remaining);
   if (UNLIKELY(buffer - body_start != body_length))
     return (*error = FF_BODY_LENGTH_MISMATCH, 0);
-  buffer += STR_LEN(FIX_CHECKSUM "=");
+  buffer += STR_LEN("10=");
 
   const uint16_t header_length = body_start - buffer_start;
 
@@ -309,7 +309,7 @@ static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_messa
       return;
     }
 
-    message->fields[message->n_fields++] = (ff_field_t){
+    message->fields[message->n_fields++] = (ff_field_t) {
       .tag = buffer,
       .tag_len = tag_len,
       .value = delim,

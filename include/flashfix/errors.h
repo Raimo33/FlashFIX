@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-13 18:56:52                                                
+last edited: 2025-02-16 22:54:38                                                
 
 ================================================================================*/
 
@@ -18,8 +18,8 @@ typedef enum
   FF_INVALID_MESSAGE,
   FF_BODY_LENGTH_MISMATCH,
   FF_CHECKSUM_MISMATCH,
-  FF_BUFFER_TOO_SMALL,
-  FF_TOO_MANY_FIELDS
+  FF_TOO_MANY_FIELDS,
+  FF_MESSAGE_TOO_BIG
 } ff_error_t;
 
 #endif

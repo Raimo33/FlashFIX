@@ -55,30 +55,30 @@ install(FILES ${FLASHFIX_PUBLIC_HEADERS}
   DESTINATION include/flashfix
 )
 
-add_executable(test_static tests/test.c)
+add_executable(test_static EXCLUDE_FROM_ALL tests/test.c)
 target_link_libraries(test_static flashfix_static)
 
-add_executable(test_shared tests/test.c)
+add_executable(test_shared EXCLUDE_FROM_ALL tests/test.c)
 target_link_libraries(test_shared flashfix_shared)
 
 set(BENCHMARK_NUM_FIELDS 1024)
 
-add_executable(benchmark_static tests/benchmark.c)
+add_executable(benchmark_static EXCLUDE_FROM_ALL tests/benchmark.c)
 target_link_libraries(benchmark_static flashfix_static m)
 target_compile_options(benchmark_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
 
-add_executable(benchmark_shared tests/benchmark.c)
+add_executable(benchmark_shared EXCLUDE_FROM_ALL tests/benchmark.c)
 target_link_libraries(benchmark_shared flashfix_static m)
 target_compile_options(benchmark_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
 
-add_custom_target(run_tests
+add_custom_target(run_tests DEPENDS test_static test_shared
   COMMAND $<TARGET_FILE:test_static>
   COMMAND $<TARGET_FILE:test_shared>
-  COMMENT "Running all tests (CTest completely disabled)"
+  COMMENT "Running all tests"
 )
 
 #TODO: use perf, generate unified flamegraphs (perf record) and python plots for each csv file
-add_custom_target(run_benchmarks
+add_custom_target(run_benchmarks DEPENDS benchmark_static benchmark_shared
   COMMAND $<TARGET_FILE:benchmark_static>
   COMMAND $<TARGET_FILE:benchmark_shared>
   COMMENT "Running all benchmarks"

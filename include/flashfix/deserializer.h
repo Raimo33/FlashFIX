@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 17:33:44                                                
+last edited: 2025-02-16 22:54:38                                                
 
 ================================================================================*/
 
@@ -23,9 +23,9 @@ description:
   - checks if the buffer contains a full FIX message (aka full checksum is present) 
   very important: if
   the buffer is too small (aka the partial message that arrived has filled the whole buffer)
-  there is potential for an infinite loop if you keep repeating the call to ff_is_full
-  with the same buffer and buffer_size, the function will yield a FF_BUFFER_TOO_SMALL error
-  in that case, you should only avoid ff_is_full with a NULL error pointer if you have
+  there is potential for an infinite loop if you keep repeating the call to ff_is_full_message
+  with the same buffer and buffer_size, the function will yield a FF_MESSAGE_TOO_BIG error
+  in that case, you should only avoid ff_is_full_message with a NULL error pointer if you have
   other ways to detect that the buffer is full
 
 inputs:
@@ -56,7 +56,7 @@ it does check:
   - the presence of the full checksum tag ("10=XXX|")
 
 */
-bool ff_is_full(const char *restrict buffer, const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error);
+bool ff_is_full_message(const char *restrict buffer, const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error);
 
 /*
 
