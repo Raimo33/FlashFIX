@@ -61,6 +61,8 @@ target_link_libraries(test_static flashfix_static)
 add_executable(test_shared tests/test.c)
 target_link_libraries(test_shared flashfix_shared)
 
+set(BENCHMARK_NUM_FIELDS 1024)
+
 add_executable(benchmark_static tests/benchmark.c)
 target_link_libraries(benchmark_static flashfix_static m)
 target_compile_options(benchmark_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)

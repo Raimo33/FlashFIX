@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 21:59:42                                                
+last edited: 2025-02-16 19:07:50                                                
 
 ================================================================================*/
 
@@ -52,7 +52,7 @@ CONSTRUCTOR void ff_serializer_init(void)
   _128_reverse_mask  = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #endif
 }
-
+#include <stdio.h>
 uint16_t ff_serialize(char *restrict buffer, const uint16_t buffer_size, const ff_message_t *restrict message, ff_error_t *restrict error)
 {
   ff_error_t local_error = FF_OK;
