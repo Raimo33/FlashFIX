@@ -75,7 +75,7 @@ add_custom_target(run_tests
   COMMENT "Running all tests (CTest completely disabled)"
 )
 
-#TODO: use perf, generate unified flamegraph and python plots for each csv file
+#TODO: use perf, generate unified flamegraphs (perf record) and python plots for each csv file
 add_custom_target(run_benchmarks
   COMMAND $<TARGET_FILE:benchmark_static>
   COMMAND $<TARGET_FILE:benchmark_shared>
