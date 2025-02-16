@@ -7,9 +7,12 @@
 libflashfix.so.*
 test_shared
 test_static
+benchmark_shared
+benchmark_static
 *.dll
 .editorconfig
 Makefile
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
+*.csv
