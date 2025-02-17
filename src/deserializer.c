@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-16 22:54:38                                                
+last edited: 2025-02-17 13:36:59                                                
 
 ================================================================================*/
 
@@ -117,7 +117,7 @@ error:
   return 0;
 }
 
-//TODO optimize, bottleneck
+//TODO optimize, bottleneck, 93% of the time spent here
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
   const char *const last = buffer + buffer_size - STR_LEN("10=000\x01");

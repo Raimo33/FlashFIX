@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-02-16 22:54:38                                                
+last edited: 2025-02-17 13:36:59                                                
 
 ================================================================================*/
 
@@ -15,7 +15,7 @@ last edited: 2025-02-16 22:54:38
 # include <stdint.h>
 
 # ifndef FIX_MAX_FIELDS
-#   define FIX_MAX_FIELDS 1024
+#   define FIX_MAX_FIELDS 64
 # endif
 
 typedef struct
