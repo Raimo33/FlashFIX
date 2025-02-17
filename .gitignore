@@ -4,7 +4,7 @@
 *.a
 *.o
 *.so
-libflashfix.so.*
+libflashfix.*
 test
 benchmark
 benchmark
