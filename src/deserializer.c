@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-17 13:36:59                                                
+last edited: 2025-02-17 19:51:20                                                
 
 ================================================================================*/
 
@@ -121,7 +121,7 @@ error:
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
   const char *const last = buffer + buffer_size - STR_LEN("10=000\x01");
-  const char *const aligned_buffer = align_forward(buffer, 64);
+  const char *const aligned_buffer = align_forward(buffer);
 
   while (UNLIKELY(buffer < aligned_buffer))
   {
@@ -288,6 +288,8 @@ static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_messa
 {
   const char *const end = buffer + buffer_size;
 
+  ff_field_t *fields = message->fields;
+
   while (LIKELY(buffer < end))
   {
     char *delim = memchr(buffer, '=', end - buffer);
@@ -309,12 +311,13 @@ static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_messa
       return;
     }
 
-    message->fields[message->n_fields++] = (ff_field_t) {
+    *fields++ = (ff_field_t) {
       .tag = buffer,
       .tag_len = tag_len,
       .value = delim,
       .value_len = value_len
     };
+    message->n_fields++;
 
     buffer = soh;
   }

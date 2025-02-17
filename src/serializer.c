@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-17 15:08:46                                                
+last edited: 2025-02-17 19:51:20                                                
 
 ================================================================================*/
 
@@ -55,12 +55,13 @@ CONSTRUCTOR void ff_serializer_init(void)
 bool ff_message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size, UNUSED ff_error_t *restrict error)
 {
   uint32_t total_len = (message->n_fields << 1) + STR_LEN("8=FIX.4.4|9=00000|10=000|") + 1;
-  uint16_t i = 0;
+  const ff_field_t *fields = message->fields;
+  uint16_t n_fields = message->n_fields;
 
 #ifdef __AVX512F__
-  while (LIKELY(i + 16 < message->n_fields && total_len <= buffer_size))
+  while (LIKELY(n_fields >= 16))
   {
-    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, message->fields + i, sizeof(ff_field_t));
+    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(ff_field_t));
 
     const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
     const __m512i value_len = _mm512_srli_epi32(lengths, 16);
@@ -68,37 +69,37 @@ bool ff_message_fits_in_buffer(const ff_message_t *restrict message, const uint1
     const __m512i sum = _mm512_add_epi32(tag_len, value_len);
     total_len += _mm512_reduce_add_epi32(sum);
 
-    i += 16;
+    n_fields -= 16;
+    fields += 16;
   }
 #endif
 
 //TODO: Implement AVX2 and SSE2 versions (they dont have reduce, so we need to use _mm256_extract_epi32 and _mm_extract_epi32)
 
-  while (LIKELY(i < message->n_fields && total_len <= buffer_size))
+  while (LIKELY(n_fields-- && total_len <= buffer_size))
   {
-    total_len += message->fields[i].tag_len + message->fields[i].value_len;
-    i++;
+    total_len += fields->tag_len + fields->value_len;
+    fields++;
   }
+
   return total_len <= buffer_size;
 }
 
-//TODO speedup, much slower than deserialize
 uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message, UNUSED ff_error_t *restrict error)
 {
   const char *const buffer_start = buffer;
 
   const ff_field_t *fields = message->fields;
-  const uint16_t n_fields = message->n_fields;
+  uint16_t n_fields = message->n_fields;
 
-  for (uint16_t i = 0; LIKELY(i < n_fields); i++)
+  while (LIKELY(n_fields--))
   {
-    memcpy(buffer, fields[i].tag, fields[i].tag_len);
-    buffer += fields[i].tag_len;
+    memcpy(buffer, fields->tag, fields->tag_len);
     *buffer++ = '=';
-
-    memcpy(buffer, fields[i].value, fields[i].value_len);
-    buffer += fields[i].value_len;
+    memcpy(buffer, fields->value, fields->value_len);
     *buffer++ = '\x01';
+
+    fields++;
   }
 
   return buffer - buffer_start;
