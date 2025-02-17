@@ -29,6 +29,9 @@ set(FLASHFIX_COMPILE_OPTIONS
   -fno-semantic-interposition -fno-stack-protector -fno-plt 
   -fno-asynchronous-unwind-tables -funroll-loops -fomit-frame-pointer
 )
+if(DEFINED FIX_MAX_FIELDS)
+  list(APPEND FLASHFIX_COMPILE_OPTIONS -DFIX_MAX_FIELDS=${FIX_MAX_FIELDS})
+endif()
 
 add_library(flashfix_shared SHARED ${FLASHFIX_SOURCES})
 target_include_directories(flashfix_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -58,8 +61,6 @@ install(FILES ${FLASHFIX_PUBLIC_HEADERS}
 add_executable(test EXCLUDE_FROM_ALL tests/test.c)
 target_link_libraries(test flashfix_static)
 
-set(BENCHMARK_NUM_FIELDS 1024)
-
-add_executable(benchmark EXCLUDE_FROM_ALL tests/benchmark.c)
+add_executable(benchmark EXCLUDE_FROM_ALL benchmarks/benchmark.c)
 target_link_libraries(benchmark flashfix_static m)
 target_compile_options(benchmark PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)

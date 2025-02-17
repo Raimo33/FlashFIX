@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-16 22:54:38                                                
+last edited: 2025-02-17 15:08:46                                                
 
 ================================================================================*/
 
@@ -137,7 +137,7 @@ uint16_t ff_finalize(char *buffer, const uint16_t len, UNUSED ff_error_t *restri
 
   buffer += added_len + len;
 
-  constexpr char checksum_table[256][sizeof(uint32_t)] = {
+  constexpr char checksum_table[256][sizeof(uint32_t)] ALIGNED(32) = {
     {"000\x01"}, {"001\x01"}, {"002\x01"}, {"003\x01"}, {"004\x01"}, {"005\x01"}, {"006\x01"}, {"007\x01"}, {"008\x01"}, {"009\x01"},
     {"010\x01"}, {"011\x01"}, {"012\x01"}, {"013\x01"}, {"014\x01"}, {"015\x01"}, {"016\x01"}, {"017\x01"}, {"018\x01"}, {"019\x01"},
     {"020\x01"}, {"021\x01"}, {"022\x01"}, {"023\x01"}, {"024\x01"}, {"025\x01"}, {"026\x01"}, {"027\x01"}, {"028\x01"}, {"029\x01"},

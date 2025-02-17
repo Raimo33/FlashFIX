@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-15 21:59:42                                                
+last edited: 2025-02-17 15:08:46                                                
 
 ================================================================================*/
 
@@ -27,7 +27,7 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
 
     const __m512i vec = _mm512_load_si512((const __m512i *)buffer);
     const __m512i sum = _mm512_sad_epu8(vec, _mm512_setzero_si512());
-    checksum += (const uint8_t)_mm512_reduce_add_epi64(sum);
+    checksum += (uint8_t)_mm512_reduce_add_epi64(sum);
 
     buffer += 64;
   }
@@ -45,13 +45,13 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
     const __m128i sum_high = _mm256_extracti128_si256(sum, 1);
     sum_low = _mm_add_epi64(sum_low, sum_high);
 
-    checksum += (const uint8_t)(_mm_extract_epi64(sum_low, 0) + _mm_extract_epi64(sum_low, 1));
+    checksum += (uint8_t)(_mm_extract_epi64(sum_low, 0) + _mm_extract_epi64(sum_low, 1));
 
     buffer += 32;
   }
 #endif
 
-#ifdef __SSE2__
+#ifdef __SSE4_1__
   while (LIKELY(buffer + 16 <= end))
   {
     PREFETCHR(buffer + 32, 3);
@@ -59,7 +59,7 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
     const __m128i vec = _mm_load_si128((const __m128i *)buffer);
     const __m128i sum = _mm_sad_epu8(vec, _mm_setzero_si128());
 
-    checksum += (const uint8_t)(_mm_extract_epi64(sum, 0) + _mm_extract_epi64(sum, 1));
+    checksum += (uint8_t)(_mm_extract_epi64(sum, 0) + _mm_extract_epi64(sum, 1));
 
     buffer += 16;
   }
