@@ -59,7 +59,7 @@ bool ff_message_fits_in_buffer(const ff_message_t *restrict message, const uint1
   uint16_t n_fields = message->n_fields;
 
 #ifdef __AVX512F__
-  while (LIKELY(n_fields >= 16))
+  while (LIKELY(n_fields >= 16 && total_len <= buffer_size))
   {
     const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(ff_field_t));
 
