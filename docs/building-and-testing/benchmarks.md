@@ -13,18 +13,18 @@ Thy're are performed on the static library compiled following the [installation 
 ### AVX512
   *Not tested yet, feel free to contribute!*
 ### AVX2
-  ![Deserialization_avx2](/images/deserialize_avx2.png)
+  ![Deserialization_avx2](../images/deserialize_avx2.png)
 ### SSE
-  ![Deserialization_sse](/images/deserialize_sse.png)
+  ![Deserialization_sse](../images/deserialize_sse.png)
 
 ## Serialization
 
 ### AVX512
   *Not tested yet, feel free to contribute!*
 ### AVX2
-  ![Serialization_avx2](/images/serialize_avx2.png)
+  ![Serialization_avx2](../images/serialize_avx2.png)
 ### SSE
-  ![Serialization_sse](/images/serialize_sse.png)
+  ![Serialization_sse](../images/serialize_sse.png)
 
 ## Run your own benchmarks
 
