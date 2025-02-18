@@ -1,14 +1,3 @@
-/*================================================================================
-
-File: tinyseg.js                                                                
-Creator: Claudio Raimondi                                                       
-Email: claudio.raimondi@pm.me                                                   
-
-created at: 2025-02-18 16:17:32                                                 
-last edited: 2025-02-18 16:17:32                                                
-
-================================================================================*/
-
 /**
  * export the module via AMD, CommonJS or as a browser global
  * Export code from https://github.com/umdjs/umd/blob/master/returnExports.js
