@@ -32,6 +32,13 @@ typedef enum
   FF_BODY_LENGTH_MISMATCH,
   FF_CHECKSUM_MISMATCH,
   FF_TOO_MANY_FIELDS,
-  FF_MESSAGE_TOO_BIG
 } ff_error_t;
+```
+
+## States
+
+Included in the `flashfix/structs.h` header file.
+
+```c
+typedef struct ff_write_state_t ff_write_state_t;
 ```

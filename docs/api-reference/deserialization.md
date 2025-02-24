@@ -8,37 +8,6 @@ The following function prototypes can be found in the `deserialization.h` header
 
 These functions **only verify the structural integrity** of messages in terms of format, checksum, and body length. They do not validate the correctness of the messages (e.g. duplicate tags, invalid values, etc.).
 
-## ff_is_full_message
-
-```c
-bool ff_is_full_message(const char *restrict buffer, const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error);
-```
-
-### Description
-checks if the buffer contains a full FIX message (aka full checksum is present).
-
-**WARNING**: if the buffer is too small (aka the partial message that arrived has filled the whole buffer) there is potential for an infinite loop if you keep repeating the call to `ff_is_full_message` with the same buffer and `buffer_size`, the function will yield a FF_MESSAGE_TOO_BIG error in that case, you should only call `ff_is_full_message` with a `NULL` error pointer if you have other ways to detect that the buffer is full
-
-### Parameters
-  - `buffer` - the buffer which contains a full or partial serialized message
-  - `buffer_size` - the size of the buffer in bytes
-  - `message_len` - the length of the serialized message (portion of the buffer that is full)
-  - `error` - an optional pointer to retrieve error information
-
-### Returns
-  - `true` if the buffer contains a full message
-  - `false` if the buffer contains a partial message
-  - `false` in case of error
-
-### Undefined Behavior
-  - `buffer` is `NULL`
-  - `buffer_size` is different from the actual size of the buffer
-  - `message_len` is different from the actual length of the message
-  - `message_len` is bigger than `buffer_size`
-
-### Errors
-  - `FF_MESSAGE_TOO_BIG` - the message is too big to fit in the buffer
-
 ## ff_deserialize
 
 ```c

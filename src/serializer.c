@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-24 17:33:11                                                
+last edited: 2025-02-24 19:19:48                                                
 
 ================================================================================*/
 
@@ -57,7 +57,7 @@ CONSTRUCTOR void ff_serializer_init(void)
 #endif
 }
 
-constexpr char checksum_table[256][4] = {
+static char checksum_table[256][4] = {
   {"000\x01"}, {"001\x01"}, {"002\x01"}, {"003\x01"}, {"004\x01"}, {"005\x01"}, {"006\x01"}, {"007\x01"}, {"008\x01"}, {"009\x01"},
   {"010\x01"}, {"011\x01"}, {"012\x01"}, {"013\x01"}, {"014\x01"}, {"015\x01"}, {"016\x01"}, {"017\x01"}, {"018\x01"}, {"019\x01"},
   {"020\x01"}, {"021\x01"}, {"022\x01"}, {"023\x01"}, {"024\x01"}, {"025\x01"}, {"026\x01"}, {"027\x01"}, {"028\x01"}, {"029\x01"},
@@ -86,7 +86,7 @@ constexpr char checksum_table[256][4] = {
   {"250\x01"}, {"251\x01"}, {"252\x01"}, {"253\x01"}, {"254\x01"}, {"255\x01"}
 };
 
-uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message, UNUSED ff_error_t *restrict error)
+uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
 
@@ -125,7 +125,7 @@ uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict messag
   return buffer - buffer_start;
 }
 
-int32_t ff_serialize_write(const int32_t fd, const ff_message_t *msg, ff_write_state_t *state, UNUSED ff_error_t *error)
+int32_t ff_serialize_write(const int32_t fd, const ff_message_t *msg, ff_write_state_t *state)
 {
   if (UNLIKELY(state->bytes_written == 0))
     prepare_iov(msg, state);
@@ -145,51 +145,58 @@ int32_t ff_serialize_write(const int32_t fd, const ff_message_t *msg, ff_write_s
 
   const int32_t n = writev(fd, state->iov + i, state->iovcnt - i);
   if (LIKELY(n < 0))
-  {
-    (void)(error && (*error = FF_WOULD_BLOCK * (errno == EAGAIN || errno == EWOULDBLOCK) + FF_IO_ERROR * (errno != EAGAIN && errno != EWOULDBLOCK)));
     return -1;
-  }
 
   state->bytes_written += n;
-  return state->bytes_written * (state->bytes_written != state->total_bytes);
+  if (state->bytes_written < state->total_bytes)
+    return -1;
+
+  return state->bytes_written;
 }
 
 static void prepare_iov(const ff_message_t *msg, ff_write_state_t *state)
 {
   uint16_t iovcnt = 0;
   const ff_field_t *fields = msg->fields;
-  
-  state->iov[iovcnt++] = (struct iovec) {"8", 1};
-  state->iov[iovcnt++] = (struct iovec) {"=", 1};
-  state->iov[iovcnt++] = (struct iovec) {"FIX.4.4", 7};
-  state->iov[iovcnt++] = (struct iovec) {"\x01", 1};
-  
+
+  static char begin_string_tag[] = "8";
+  static char begin_string_value[] = "FIX.4.4";
+  static char body_length_tag[] = "9";
+  static char checksum_tag[] = "10";
+  static char equals[] = "=";
+  static char separator[] = "\x01";
+
+  state->iov[iovcnt++] = (struct iovec) {begin_string_tag, 1};
+  state->iov[iovcnt++] = (struct iovec) {equals, 1};
+  state->iov[iovcnt++] = (struct iovec) {begin_string_value, 7};
+  state->iov[iovcnt++] = (struct iovec) {separator, 1};
+
   state->total_bytes = 10;
 
-  char body_length_str[6];
   const uint16_t body_length = compute_body_length(fields, msg->n_fields);
-  const uint8_t body_length_len = utoa(body_length, body_length_str);
+  const uint8_t body_length_len = utoa(body_length, state->body_length_str);
 
-  state->iov[iovcnt++] = (struct iovec) {"9", 1};
-  state->iov[iovcnt++] = (struct iovec) {"=", 1};
-  state->iov[iovcnt++] = (struct iovec) {body_length_str, body_length_len};
-  state->iov[iovcnt++] = (struct iovec) {"\x01", 1};
+  state->iov[iovcnt++] = (struct iovec) {body_length_tag, 1};
+  state->iov[iovcnt++] = (struct iovec) {equals, 1};
+  state->iov[iovcnt++] = (struct iovec) {state->body_length_str, body_length_len};
+  state->iov[iovcnt++] = (struct iovec) {separator, 1};
 
   state->total_bytes = 10 + body_length_len;
 
   for (uint16_t i = 0; LIKELY(i < msg->n_fields); i++)
   {
     state->iov[iovcnt++] = (struct iovec) {fields[i].tag, fields[i].tag_len};
-    state->iov[iovcnt++] = (struct iovec) {"=", 1};
+    state->iov[iovcnt++] = (struct iovec) {equals, 1};
     state->iov[iovcnt++] = (struct iovec) {fields[i].value, fields[i].value_len};
-    state->iov[iovcnt++] = (struct iovec) {"\x01", 1};
+    state->iov[iovcnt++] = (struct iovec) {separator, 1};
 
     state->total_bytes += fields[i].tag_len + fields[i].value_len + 2;
   }
   
   const uint8_t checksum = compute_checksum_iov(state->iov, iovcnt);
-  state->iov[iovcnt++] = (struct iovec) {"10=", 3};
-  state->iov[iovcnt++] = (struct iovec) {(void *)checksum_table[checksum], 4};
+  state->iov[iovcnt++] = (struct iovec) {checksum_tag, 2};
+  state->iov[iovcnt++] = (struct iovec) {equals, 1};
+  state->iov[iovcnt++] = (struct iovec) {checksum_table[checksum], 4};
 
   state->total_bytes += 7;
 
