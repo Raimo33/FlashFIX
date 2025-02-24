@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-24 16:35:15                                                
+last edited: 2025-02-24 17:08:50                                                
 
 ================================================================================*/
 
@@ -76,8 +76,6 @@ void flood_fd(int fd)
 }
 
 static char *all_tests(void);
-static char *test_message_fits_in_buffer_positive(void);
-static char *test_message_fits_in_buffer_negative(void);
 static char *test_serialize_normal_message(void);
 static char *test_serialize_one_field_message(void);
 static char *test_serialize_no_error_param(void);
@@ -115,9 +113,6 @@ int main(void)
 
 static char *all_tests(void)
 {
-  mu_run_test(test_message_fits_in_buffer_positive);
-  mu_run_test(test_message_fits_in_buffer_negative);
-
   mu_run_test(test_serialize_normal_message);
   mu_run_test(test_serialize_one_field_message);
   mu_run_test(test_serialize_no_error_param);
@@ -145,58 +140,6 @@ static char *all_tests(void)
   return 0;
 }
 
-static char *test_message_fits_in_buffer_positive(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
-    .n_fields = 8
-  };
-  constexpr uint16_t buffer_size = 56 + 26 + 16;
-
-  ff_error_t error = FF_OK;
-  bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
-
-  mu_assert("error: message fits in buffer positive: wrong outcome", fits == true);
-  mu_assert("error: message fits in buffer positive: wrong error", error == FF_OK);
-
-  return 0;
-}
-
-static char *test_message_fits_in_buffer_negative(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
-    .n_fields = 8
-  };
-  constexpr uint16_t buffer_size = 56 + 26 + 16 - 1;
-
-  ff_error_t error = FF_OK;
-  bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
-
-  mu_assert("error: message fits in buffer negative: wrong outcome", fits == false);
-  mu_assert("error: message fits in buffer negative: wrong error", error == FF_OK);
-
-  return 0;
-}
-
 static char *test_serialize_normal_message(void)
 {
   static const ff_message_t message = {
@@ -213,6 +156,8 @@ static char *test_serialize_normal_message(void)
     .n_fields = 8
   };
   constexpr char expected_buffer[] =
+    "8=FIX.4.4\x01"
+    "9=73\x01"
     "6=123\x01"
     "35=D\x01"
     "49=BROKER\x01"
@@ -220,7 +165,8 @@ static char *test_serialize_normal_message(void)
     "34=1\x01"
     "52=20250210-18:52:11.000\x01"
     "98=0\x01"
-    "108=30\x01";
+    "108=30\x01"
+    "10=127\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
   constexpr ff_error_t expected_error = FF_OK;
 
@@ -243,7 +189,11 @@ static char *test_serialize_one_field_message(void)
     },
     .n_fields = 1
   };
-  constexpr char expected_buffer[] = "6=123\x01";
+  constexpr char expected_buffer[] =
+    "8=FIX.4.4\x01"
+    "9=6\x01"
+    "6=123\x01"
+    "10=216\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
   constexpr ff_error_t expected_error = FF_OK;
 
@@ -274,6 +224,8 @@ static char *test_serialize_no_error_param(void)
     .n_fields = 8
   };
   constexpr char expected_buffer[] =
+    "8=FIX.4.4\x01"
+    "9=73\x01"
     "6=123\x01"
     "35=D\x01"
     "49=BROKER\x01"
@@ -281,7 +233,8 @@ static char *test_serialize_no_error_param(void)
     "34=1\x01"
     "52=20250210-18:52:11.000\x01"
     "98=0\x01"
-    "108=30\x01";
+    "108=30\x01"
+    "10=127\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
   char buffer[sizeof(expected_buffer)];

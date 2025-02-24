@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-24 16:35:15                                                
+last edited: 2025-02-24 17:08:50                                                
 
 ================================================================================*/
 
@@ -20,7 +20,7 @@ static inline uint16_t check_body_length_tag(const char *buffer, ff_error_t *res
 static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *body_length, ff_error_t *restrict error);
 static inline uint16_t validate_message(const char *buffer_start, const uint16_t buffer_size, const char *body_start, const uint16_t body_length, ff_error_t *restrict error);
 static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
-static uint32_t ff_atoui(const char *str, const char **endptr);
+static uint32_t atoui(const char *str, const char **endptr);
 ALWAYS_INLINE static inline uint32_t mul10(uint32_t n);
 
 //TODO find a way to make them const, forcing prevention of thread safety issues, constexpr??
@@ -256,7 +256,7 @@ static inline uint16_t deserialize_body_length(const char *buffer, uint16_t *bod
 {
   const char *const buffer_start = buffer;
 
-  *body_length = (uint16_t)ff_atoui(buffer, (const char **)&buffer);
+  *body_length = (uint16_t)atoui(buffer, (const char **)&buffer);
   *error = FF_INVALID_MESSAGE * (*buffer++ != '\x01');
 
   return buffer - buffer_start;
@@ -275,7 +275,7 @@ static inline uint16_t validate_message(const char *buffer_start, const uint16_t
   const uint16_t header_length = body_start - buffer_start;
 
   const uint8_t expected_checksum = compute_checksum(buffer_start, body_length + header_length);
-  const uint8_t provided_checksum = (uint8_t)ff_atoui(buffer, (const char **)&buffer);
+  const uint8_t provided_checksum = (uint8_t)atoui(buffer, (const char **)&buffer);
 
   if (UNLIKELY(expected_checksum != provided_checksum))
     return (*error = FF_CHECKSUM_MISMATCH, 0);
@@ -323,7 +323,7 @@ static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_messa
   }
 }
 
-static uint32_t ff_atoui(const char *str, const char **endptr)
+static uint32_t atoui(const char *str, const char **endptr)
 {
   uint32_t result = 0;
   

@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-17 15:08:46                                                
+last edited: 2025-02-24 17:08:50                                                
 
 ================================================================================*/
 
@@ -32,13 +32,10 @@ last edited: 2025-02-17 15:08:46
 
 static void init_random_tags(char *tags[FIX_MAX_FIELDS]);
 static void init_random_values(char *values[FIX_MAX_FIELDS]);
-static bool fits_buffer(char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static void serialize(ff_message_t messages[FIX_MAX_FIELDS]);
-static void serialize_and_finalize(ff_message_t messages[FIX_MAX_FIELDS]);
-static void fits_in_buffer_and_serialize_and_finalize(ff_message_t messages[FIX_MAX_FIELDS]);
 static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static void is_full_message_and_deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], uint16_t message_lenghts[FIX_MAX_FIELDS]);
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len);
@@ -72,10 +69,7 @@ int32_t main(void)
     fill_message_structs(message_structs, tags, values);
     
     serialize(message_structs);
-    serialize_and_finalize(message_structs);
-    fits_in_buffer_and_serialize_and_finalize(message_structs);
-  }
-
+    //TODO serialize_write
   {
     char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
     uint16_t message_lengths[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
@@ -182,57 +176,6 @@ static void serialize(ff_message_t messages[FIX_MAX_FIELDS])
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
       ff_serialize(buffer, &messages[i], NULL);
-    end = __rdtscp(&aux);
-  
-    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
-    dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
-  }
-
-  close(fd);
-}
-
-static void serialize_and_finalize(ff_message_t messages[FIX_MAX_FIELDS])
-{
-  const int32_t fd = open_p("benchmark_serialize_and_finalize.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
-  
-  uint64_t start, end;
-  uint32_t aux;
-
-  char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
-
-  dprintf(fd, "# of fields, # of cpu cycles\n");
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
-  {
-    start = __rdtscp(&aux);
-    for (uint32_t j = 0; j < N_ITERATIONS; j++)
-      ff_finalize(buffer, ff_serialize(buffer, &messages[i], NULL), NULL);
-    end = __rdtscp(&aux);
-  
-    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
-    dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
-  }
-
-  close(fd);
-}
-
-static void fits_in_buffer_and_serialize_and_finalize(ff_message_t messages[FIX_MAX_FIELDS])
-{
-  const int32_t fd = open_p("benchmark_fits_in_buffer_and_serialize_and_finalize.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
-  
-  uint64_t start, end;
-  uint32_t aux;
-
-  char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
-
-  dprintf(fd, "# of fields, # of cpu cycles\n");
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
-  {
-    start = __rdtscp(&aux);
-    for (uint32_t j = 0; j < N_ITERATIONS; j++)
-    {
-      if (ff_message_fits_in_buffer(&messages[i], BUFFER_SIZE, NULL))
-        ff_finalize(buffer, ff_serialize(buffer, &messages[i], NULL), NULL);
-    }
     end = __rdtscp(&aux);
   
     const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
