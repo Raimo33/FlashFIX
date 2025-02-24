@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-24 19:19:48                                                
+last edited: 2025-02-24 20:16:00                                                
 
 ================================================================================*/
 
@@ -37,6 +37,7 @@ static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char
 static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static void serialize(ff_message_t messages[FIX_MAX_FIELDS]);
 static void serialize_write(ff_message_t messages[FIX_MAX_FIELDS]);
+static void serialize_and_write(ff_message_t messages[FIX_MAX_FIELDS]);
 static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static bool fits_buffer(char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len);
@@ -69,6 +70,7 @@ int32_t main(void)
     
     serialize(message_structs);
     serialize_write(message_structs);
+    serialize_and_write(message_structs);
   }
   
   {
@@ -80,6 +82,7 @@ int32_t main(void)
 
     deserialize(message_buffers);
     //TODO deserialize_read
+    //TODO read_and_deserialize
   }
   
   free_strings(tags, FIX_MAX_FIELDS);
@@ -194,6 +197,34 @@ static void serialize_write(ff_message_t messages[FIX_MAX_FIELDS])
     {
       ff_write_state_t state ALIGNED(ALIGNMENT) = {0};
       ff_serialize_write(dummy_fd, &messages[i], &state);
+    }
+    end = __rdtscp(&aux);
+  
+    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
+    dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
+  }
+
+  close(fd);
+}
+
+static void serialize_and_write(ff_message_t messages[FIX_MAX_FIELDS])
+{
+  const int32_t fd = open_p("benchmark_serialize_and_write.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
+  
+  uint64_t start, end;
+  uint32_t aux;
+
+  char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
+  const int32_t dummy_fd = open("/dev/null", O_WRONLY);
+
+  dprintf(fd, "# of fields, # of cpu cycles\n");
+  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  {
+    start = __rdtscp(&aux);
+    for (uint32_t j = 0; j < N_ITERATIONS; j++)
+    {
+      const uint16_t len = ff_serialize(buffer, &messages[i]);
+      write(dummy_fd, buffer, len); 
     }
     end = __rdtscp(&aux);
   
