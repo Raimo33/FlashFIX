@@ -5,13 +5,18 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-16 22:54:38                                                
+last edited: 2025-02-24 16:35:15                                                
 
 ================================================================================*/
 
 #include <flashfix.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/uio.h>
+#include <stdlib.h>
+#include <fcntl.h>
 
 #define mu_assert(message, test) do { if (!(test)) return message; } while (0)
 #define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
@@ -40,14 +45,46 @@ static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
   return true;
 }
 
+static bool compare_files(int fd, const char *expected_output)
+{
+  const size_t expected_len = strlen(expected_output);
+  size_t total_read = 0;
+  char buffer[4096];
+  ssize_t bytes_read;
+
+  while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
+  {
+    if (total_read + (size_t)bytes_read > expected_len)
+      return false;
+    if (memcmp(buffer, expected_output + total_read, bytes_read) != 0)
+      return false;
+    total_read += bytes_read;
+  }
+
+  if (bytes_read == -1)
+    return false;
+  if (total_read != expected_len)
+    return false;
+
+  return true;
+}
+
+void flood_fd(int fd)
+{
+  char buf[4096] = {0};
+  while (write(fd, buf, sizeof(buf)) > 0);
+}
+
 static char *all_tests(void);
 static char *test_message_fits_in_buffer_positive(void);
 static char *test_message_fits_in_buffer_negative(void);
 static char *test_serialize_normal_message(void);
 static char *test_serialize_one_field_message(void);
 static char *test_serialize_no_error_param(void);
-static char *test_finalize_normal_message(void);
-static char *test_finalize_no_error_param(void);
+static char *test_serialize_write_normal_message(void);
+static char *test_serialize_write_one_field_message(void);
+static char *test_serialize_write_no_error_param(void);
+static char *test_serialize_write_non_blocking(void);
 static char *test_is_full_normal_message_positive(void);
 static char *test_is_full_normal_message_negative(void);
 static char *test_is_full_message_too_big(void);
@@ -85,8 +122,10 @@ static char *all_tests(void)
   mu_run_test(test_serialize_one_field_message);
   mu_run_test(test_serialize_no_error_param);
 
-  mu_run_test(test_finalize_normal_message);
-  mu_run_test(test_finalize_no_error_param);
+  mu_run_test(test_serialize_write_normal_message);
+  mu_run_test(test_serialize_write_one_field_message);
+  mu_run_test(test_serialize_write_no_error_param);
+  mu_run_test(test_serialize_write_non_blocking);
 
   mu_run_test(test_is_full_normal_message_positive);
   mu_run_test(test_is_full_normal_message_negative);
@@ -110,33 +149,7 @@ static char *test_message_fits_in_buffer_positive(void)
 {
   static const ff_message_t message = {
     .fields = {
-      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
-    .n_fields = 8
-  };
-  constexpr uint16_t buffer_size = 57 + 26 + 16;
-
-  ff_error_t error = FF_OK;
-  bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
-
-  mu_assert("error: message fits in buffer positive: wrong outcome", fits == true);
-  mu_assert("error: message fits in buffer positive: wrong error", error == FF_OK);
-
-  return 0;
-}
-
-static char *test_message_fits_in_buffer_negative(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
       { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
       { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
       { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
@@ -152,6 +165,32 @@ static char *test_message_fits_in_buffer_negative(void)
   ff_error_t error = FF_OK;
   bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
 
+  mu_assert("error: message fits in buffer positive: wrong outcome", fits == true);
+  mu_assert("error: message fits in buffer positive: wrong error", error == FF_OK);
+
+  return 0;
+}
+
+static char *test_message_fits_in_buffer_negative(void)
+{
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  constexpr uint16_t buffer_size = 56 + 26 + 16 - 1;
+
+  ff_error_t error = FF_OK;
+  bool fits = ff_message_fits_in_buffer(&message, buffer_size, &error);
+
   mu_assert("error: message fits in buffer negative: wrong outcome", fits == false);
   mu_assert("error: message fits in buffer negative: wrong error", error == FF_OK);
 
@@ -162,7 +201,7 @@ static char *test_serialize_normal_message(void)
 {
   static const ff_message_t message = {
     .fields = {
-      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
       { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
       { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
       { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
@@ -174,7 +213,7 @@ static char *test_serialize_normal_message(void)
     .n_fields = 8
   };
   constexpr char expected_buffer[] =
-    "9=123\x01"
+    "6=123\x01"
     "35=D\x01"
     "49=BROKER\x01"
     "56=CLIENT\x01"
@@ -200,11 +239,11 @@ static char *test_serialize_one_field_message(void)
 {
   static const ff_message_t message = {
     .fields = {
-      { .tag = "9", .tag_len = 1, .value = "123", .value_len = 3 }
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 }
     },
     .n_fields = 1
   };
-  constexpr char expected_buffer[] = "9=123\x01";
+  constexpr char expected_buffer[] = "6=123\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
   constexpr ff_error_t expected_error = FF_OK;
 
@@ -223,6 +262,7 @@ static char *test_serialize_no_error_param(void)
 {
   static const ff_message_t message = {
     .fields = {
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
       { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
       { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
       { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
@@ -231,9 +271,10 @@ static char *test_serialize_no_error_param(void)
       { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
       { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
     },
-    .n_fields = 7
+    .n_fields = 8
   };
   constexpr char expected_buffer[] =
+    "6=123\x01"
     "35=D\x01"
     "49=BROKER\x01"
     "56=CLIENT\x01"
@@ -252,11 +293,25 @@ static char *test_serialize_no_error_param(void)
   return 0;
 }
 
-static char *test_finalize_normal_message(void)
+static char *test_serialize_write_normal_message(void)
 {
-  static const char expected_buffer[] = 
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 8
+  };
+  constexpr char expected_output[] =
     "8=FIX.4.4\x01"
-    "9=67\x01"
+    "9=73\x01"
+    "6=123\x01"
     "35=D\x01"
     "49=BROKER\x01"
     "56=CLIENT\x01"
@@ -264,30 +319,71 @@ static char *test_finalize_normal_message(void)
     "52=20250210-18:52:11.000\x01"
     "98=0\x01"
     "108=30\x01"
-    "10=120\x01";
-  char buffer[sizeof(expected_buffer)] =
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01";
-  constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
+    "10=127\x01";
+  constexpr int32_t expected_len = sizeof(expected_output) - 1;
 
+  int32_t fds[2];
+  mu_assert("error: serialize write normal message: pipe failed", pipe(fds) == 0);
+  ff_write_state_t state = {0};
   ff_error_t error = FF_OK;
-  uint16_t len = ff_finalize(buffer, strlen(buffer), &error);
+  const int32_t len = ff_serialize_and_write(fds[1], &message, &state, &error);
+  close(fds[1]);
 
-  mu_assert("error: finalize normal message: wrong length", len == expected_len);
-  mu_assert("error: finalize normal message: wrong error", error == FF_OK);
-  mu_assert("error: finalize normal message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+  mu_assert("error: serialize write normal message: wrong len", len == expected_len);
+  mu_assert("error: serialize write normal message: wrong output", compare_files(fds[0], expected_output));
+  mu_assert("error: serialize write normal message: wrong error", error == FF_OK);
+
+  close(fds[0]);
 
   return 0;
 }
 
-static char *test_finalize_no_error_param(void)
+static char *test_serialize_write_one_field_message(void)
 {
-  constexpr char expected_buffer[] = 
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 }
+    },
+    .n_fields = 1
+  };
+  constexpr char expected_output[] =
+    "8=FIX.4.4\x01"
+    "9=6\x01"
+    "6=123\x01"
+    "10=216\x01";
+  constexpr int32_t expected_len = sizeof(expected_output) - 1;
+
+  int32_t fds[2];
+  mu_assert("error: serialize write one field message: pipe failed", pipe(fds) == 0);
+  ff_write_state_t state = {0};
+  ff_error_t error = FF_OK;
+  const int32_t len = ff_serialize_and_write(fds[1], &message, &state, &error);
+  close(fds[1]);
+
+  mu_assert("error: serialize write one field message: wrong len", len == expected_len);
+  mu_assert("error: serialize write one field message: wrong output", compare_files(fds[0], expected_output));
+  mu_assert("error: serialize write one field message: wrong error", error == FF_OK);
+
+  close(fds[0]);
+
+  return 0;
+}
+
+static char *test_serialize_write_no_error_param(void)
+{
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 7
+  };
+  constexpr char expected_output[] =
     "8=FIX.4.4\x01"
     "9=67\x01"
     "35=D\x01"
@@ -298,20 +394,51 @@ static char *test_finalize_no_error_param(void)
     "98=0\x01"
     "108=30\x01"
     "10=120\x01";
-  char buffer[sizeof(expected_buffer)] =
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01";
-  constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
+  constexpr int32_t expected_len = sizeof(expected_output) - 1;
 
-  uint16_t len = ff_finalize(buffer, strlen(buffer), NULL);
+  int32_t fds[2];
+  mu_assert("error: serialize write no error param: pipe failed", pipe(fds) == 0);
+  ff_write_state_t state = {0};
+  const int32_t len = ff_serialize_and_write(fds[1], &message, &state, NULL);
+  close(fds[1]);
 
-  mu_assert("error: finalize normal message: wrong length", len == expected_len);
-  mu_assert("error: finalize normal message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+  mu_assert("error: serialize write no error param: wrong len", len == expected_len);
+  mu_assert("error: serialize write no error param: wrong output", compare_files(fds[0], expected_output));
+
+  close(fds[0]);
+
+  return 0;
+}
+
+static char *test_serialize_write_non_blocking(void)
+{
+  static const ff_message_t message = {
+    .fields = {
+      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
+      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
+      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
+      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
+      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
+      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
+      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
+    },
+    .n_fields = 7
+  };
+  constexpr int32_t expected_len = -1;
+
+  int32_t fds[2];
+  mu_assert("error: serialize write non-blocking: pipe failed", pipe(fds) == 0);
+  mu_assert("error: serialize write non-blocking: fcntl failed", fcntl(fds[1], F_SETFL, O_NONBLOCK) != -1);
+  ff_write_state_t state = {0};
+  ff_error_t error = FF_OK;
+  flood_fd(fds[1]);
+  int32_t len = ff_serialize_and_write(fds[1], &message, &state, &error);
+  close(fds[1]);
+
+  mu_assert("error: serialize write non-blocking: wrong length", len == expected_len);
+  mu_assert("error: serialize write non-blocking: wrong error", error == FF_WOULD_BLOCK);
+
+  close(fds[0]);
 
   return 0;
 }

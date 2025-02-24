@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-02-17 15:08:46                                                
+last edited: 2025-02-24 16:35:15                                                
 
 ================================================================================*/
 
@@ -13,6 +13,7 @@ last edited: 2025-02-17 15:08:46
 # define STRUCTS_H
 
 # include <stdint.h>
+# include <sys/uio.h>
 
 # ifndef FIX_MAX_FIELDS
 #   define FIX_MAX_FIELDS 256
@@ -33,5 +34,13 @@ typedef struct
   ff_field_t fields[FIX_MAX_FIELDS];
   uint16_t n_fields;
 } ff_message_t;
+
+typedef struct
+{
+  struct iovec iov[(FIX_MAX_FIELDS + 3) << 2];
+  uint16_t iovcnt;
+  uint16_t bytes_written;
+  uint16_t total_bytes;
+} ff_write_state_t;
 
 #endif

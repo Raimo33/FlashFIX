@@ -4,8 +4,8 @@ File: common.c
 Creator: Claudio Raimondi                                                       
 Email: claudio.raimondi@pm.me                                                   
 
-created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-17 19:51:20                                                
+created at: 2025-02-24 16:35:15                                                 
+last edited: 2025-02-24 16:35:15                                                
 
 ================================================================================*/
 
@@ -17,7 +17,7 @@ uint8_t compute_checksum(const char *buffer, const uint16_t len)
   uint8_t checksum = 0;
   const char *aligned_buffer = align_forward(buffer);
 
-  while (UNLIKELY(buffer < aligned_buffer))
+  while (UNLIKELY(buffer < aligned_buffer && buffer < end))
     checksum += *buffer++;
 
 #ifdef __AVX512F__

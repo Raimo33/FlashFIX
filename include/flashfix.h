@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-12 13:35:28                                                 
-last edited: 2025-02-16 19:07:50                                                
+last edited: 2025-02-24 16:35:15                                                
 
 ================================================================================*/
 
@@ -18,24 +18,6 @@ last edited: 2025-02-16 19:07:50
 
 # include "flashfix/serializer.h"
 # include "flashfix/deserializer.h"
-
-/***************************************************************************************
-
-NOTE: this is a serializer, not a parser. It will not check if the message is correct.
-
-***************************************************************************************/
-
-/***************************************************************************************
-
-NOTE: FIX_MAX_FIELDS must be baked into the library at compile time.
-
-***************************************************************************************/
-
-/***************************************************************************************
-
-WARNING: this library expects the host to support unaligned memory access. 
-
-***************************************************************************************/
 
 //TODO explore <stdbit.h> for bit manipulation
 

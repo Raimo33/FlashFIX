@@ -5,14 +5,21 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-17 19:51:20                                                
+last edited: 2025-02-24 16:35:15                                                
 
 ================================================================================*/
 
 #include "common.h"
 #include <flashfix/serializer.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/uio.h>
+#include <errno.h>
 
+static void prepare_iov(const ff_message_t *msg, ff_write_state_t *state);
+static inline uint16_t compute_body_length(const ff_field_t *fields, uint16_t n_fields);
+static uint8_t compute_checksum_iov(const struct iovec *iov, const uint16_t iovcnt);
+ALWAYS_INLINE static inline uint8_t compute_tag_checksum(const char *tag, const uint16_t tag_len);
 static uint8_t utoa(uint16_t num, char *buffer);
 ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
 ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
@@ -30,7 +37,6 @@ ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
 #ifdef __SSE2__
   static __m128i _128_len_offsets;
   static __m128i _128_mask_lower_16;
-  static __m128i _128_reverse_mask;
 #endif
 
 CONSTRUCTOR void ff_serializer_init(void)
@@ -48,41 +54,12 @@ CONSTRUCTOR void ff_serializer_init(void)
 #ifdef __SSE2__
   _128_len_offsets = _mm_set_epi32(3, 2, 1, 0);
   _128_mask_lower_16 = _mm_set1_epi32(0xFFFF);
-  _128_reverse_mask  = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 #endif
 }
 
 bool ff_message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size, UNUSED ff_error_t *restrict error)
-{
-  uint32_t total_len = (message->n_fields << 1) + STR_LEN("8=FIX.4.4|9=00000|10=000|") + 1;
-  const ff_field_t *fields = message->fields;
-  uint16_t n_fields = message->n_fields;
-
-#ifdef __AVX512F__
-  while (LIKELY(n_fields >= 16 && total_len <= buffer_size))
-  {
-    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(ff_field_t));
-
-    const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
-    const __m512i value_len = _mm512_srli_epi32(lengths, 16);
-
-    const __m512i sum = _mm512_add_epi32(tag_len, value_len);
-    total_len += _mm512_reduce_add_epi32(sum);
-
-    n_fields -= 16;
-    fields += 16;
-  }
-#endif
-
-//TODO: Implement AVX2 and SSE2 versions (they dont have reduce, so we need to use _mm256_extract_epi32 and _mm_extract_epi32)
-
-  while (LIKELY(n_fields-- && total_len <= buffer_size))
-  {
-    total_len += fields->tag_len + fields->value_len;
-    fields++;
-  }
-
-  return total_len <= buffer_size;
+{  
+  return STR_LEN("8=FIX.4.4|9=00000|10=000|") + compute_body_length(message->fields, message->n_fields) <= buffer_size;
 }
 
 uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message, UNUSED ff_error_t *restrict error)
@@ -95,50 +72,80 @@ uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict messag
   while (LIKELY(n_fields--))
   {
     memcpy(buffer, fields->tag, fields->tag_len);
+    buffer += fields->tag_len;
     *buffer++ = '=';
     memcpy(buffer, fields->value, fields->value_len);
+    buffer += fields->value_len;
     *buffer++ = '\x01';
-
     fields++;
   }
 
   return buffer - buffer_start;
 }
 
-uint16_t ff_finalize(char *buffer, const uint16_t len, UNUSED ff_error_t *restrict error)
+int32_t ff_serialize_and_write(const int32_t fd, const ff_message_t *msg, ff_write_state_t *state, UNUSED ff_error_t *error)
 {
-  const char *const buffer_start = buffer;
+  if (UNLIKELY(state->bytes_written == 0))
+    prepare_iov(msg, state);
+  else if (UNLIKELY(state->bytes_written == state->total_bytes))
+    return 0;
 
-  static const ff_field_t begin_string = {
-    .tag =  "8",
-    .tag_len = STR_LEN("8"),
-    .value = "FIX.4.4",
-    .value_len = STR_LEN("FIX.4.4")
-  };
+  uint16_t i = 0;
+  uint16_t offset = state->bytes_written;
+  while (LIKELY(i < state->iovcnt && offset >= state->iov[i].iov_len)) //TODO make this O(1)
+    offset -= state->iov[i++].iov_len;
 
-  char body_length_str[16] = {0};
-  const ff_field_t body_length = {
-    .tag = "9",
-    .tag_len = STR_LEN("9"),
-    .value = body_length_str,
-    .value_len = utoa(len, body_length_str)
-  };
+  if (UNLIKELY(offset > 0))
+  {
+    state->iov[i].iov_base = (char *)state->iov[i].iov_base + offset;
+    state->iov[i].iov_len -= offset;
+  }
 
-  const uint8_t added_len = begin_string.tag_len + 1 + begin_string.value_len + 1 + body_length.tag_len + 1 + body_length.value_len + 1;
-  memmove(buffer + added_len, buffer, len);
+  const int32_t n = writev(fd, state->iov + i, state->iovcnt - i);
+  if (LIKELY(n < 0))
+  {
+    (void)(error && (*error = FF_WOULD_BLOCK * (errno == EAGAIN || errno == EWOULDBLOCK) + FF_IO_ERROR * (errno != EAGAIN && errno != EWOULDBLOCK)));
+    return -1;
+  }
 
-  const ff_message_t message = {
-    .fields = {
-      begin_string,
-      body_length
-    },
-    .n_fields = 2
-  };
-  ff_serialize(buffer, &message, error);
+  state->bytes_written += n;
+  return state->bytes_written * (state->bytes_written != state->total_bytes);
+}
 
-  buffer += added_len + len;
+static void prepare_iov(const ff_message_t *msg, ff_write_state_t *state)
+{
+  uint16_t iovcnt = 0;
+  const ff_field_t *fields = msg->fields;
+  
+  state->iov[iovcnt++] = (struct iovec) {"8", 1};
+  state->iov[iovcnt++] = (struct iovec) {"=", 1};
+  state->iov[iovcnt++] = (struct iovec) {"FIX.4.4", 7};
+  state->iov[iovcnt++] = (struct iovec) {"\x01", 1};
+  
+  state->total_bytes = 10;
 
-  constexpr char checksum_table[256][sizeof(uint32_t)] ALIGNED(32) = {
+  char body_length_str[6];
+  const uint16_t body_length = compute_body_length(fields, msg->n_fields);
+  const uint8_t body_length_len = utoa(body_length, body_length_str);
+
+  state->iov[iovcnt++] = (struct iovec) {"9", 1};
+  state->iov[iovcnt++] = (struct iovec) {"=", 1};
+  state->iov[iovcnt++] = (struct iovec) {body_length_str, body_length_len};
+  state->iov[iovcnt++] = (struct iovec) {"\x01", 1};
+
+  state->total_bytes = 10 + body_length_len;
+
+  for (uint16_t i = 0; LIKELY(i < msg->n_fields); i++)
+  {
+    state->iov[iovcnt++] = (struct iovec) {fields[i].tag, fields[i].tag_len};
+    state->iov[iovcnt++] = (struct iovec) {"=", 1};
+    state->iov[iovcnt++] = (struct iovec) {fields[i].value, fields[i].value_len};
+    state->iov[iovcnt++] = (struct iovec) {"\x01", 1};
+
+    state->total_bytes += fields[i].tag_len + fields[i].value_len + 2;
+  }
+  
+  constexpr char checksum_table[256][4] = {
     {"000\x01"}, {"001\x01"}, {"002\x01"}, {"003\x01"}, {"004\x01"}, {"005\x01"}, {"006\x01"}, {"007\x01"}, {"008\x01"}, {"009\x01"},
     {"010\x01"}, {"011\x01"}, {"012\x01"}, {"013\x01"}, {"014\x01"}, {"015\x01"}, {"016\x01"}, {"017\x01"}, {"018\x01"}, {"019\x01"},
     {"020\x01"}, {"021\x01"}, {"022\x01"}, {"023\x01"}, {"024\x01"}, {"025\x01"}, {"026\x01"}, {"027\x01"}, {"028\x01"}, {"029\x01"},
@@ -166,16 +173,89 @@ uint16_t ff_finalize(char *buffer, const uint16_t len, UNUSED ff_error_t *restri
     {"240\x01"}, {"241\x01"}, {"242\x01"}, {"243\x01"}, {"244\x01"}, {"245\x01"}, {"246\x01"}, {"247\x01"}, {"248\x01"}, {"249\x01"},
     {"250\x01"}, {"251\x01"}, {"252\x01"}, {"253\x01"}, {"254\x01"}, {"255\x01"}
   };
+  
+  const uint8_t checksum = compute_checksum_iov(state->iov, iovcnt);
+  state->iov[iovcnt++] = (struct iovec) {"10=", 3};
+  state->iov[iovcnt++] = (struct iovec) {(void *)checksum_table[checksum], 4};
 
-  const uint8_t checksum = compute_checksum(buffer_start, buffer - buffer_start);
+  state->total_bytes += 7;
 
-  *(uint16_t *)(buffer) = *(uint16_t *)"10";
-  buffer += 2;
-  *buffer++ = '=';
-  *(uint32_t *)buffer = *(uint32_t *)checksum_table[checksum];
-  buffer += 4;
+  state->iovcnt = iovcnt;
+  state->bytes_written = 0;
+}
 
-  return buffer - buffer_start;
+static inline uint16_t compute_body_length(const ff_field_t *fields, uint16_t n_fields)
+{
+  uint16_t total_len = (n_fields << 1);
+
+#ifdef __AVX512F__
+  while (LIKELY(n_fields >= 16))
+  {
+    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(ff_field_t));
+
+    const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
+    const __m512i value_len = _mm512_srli_epi32(lengths, 16);
+
+    const __m512i sum = _mm512_add_epi32(tag_len, value_len);
+    total_len += _mm512_reduce_add_epi32(sum);
+
+    n_fields -= 16;
+    fields += 16;
+  }
+#endif
+
+//TODO: Implement AVX2 and SSE2 versions (they dont have reduce, so we need to use _mm256_extract_epi32 and _mm_extract_epi32)
+
+  while (LIKELY(n_fields--))
+  {
+    total_len += fields->tag_len + fields->value_len;
+    fields++;
+  }
+
+  return total_len;
+}
+
+static uint8_t compute_checksum_iov(const struct iovec *iov, const uint16_t iovcnt)
+{
+  const uint16_t n_fields = iovcnt >> 2; 
+  uint8_t checksum = n_fields * ('=' + '\x01');
+
+  for (uint16_t i = 0; LIKELY(i < iovcnt); i += 4)
+  {
+    const char *tag = iov[i].iov_base;
+    const uint16_t tag_len = iov[i].iov_len;
+    const char *value = iov[i + 2].iov_base;
+    const uint16_t value_len = iov[i + 2].iov_len;
+
+    checksum += compute_tag_checksum(tag, tag_len) + compute_checksum(value, value_len);
+  }
+
+  return checksum;
+}
+
+static inline uint8_t compute_tag_checksum(const char *tag, uint16_t tag_len)
+{
+  switch (tag_len)
+  {
+    case 1:
+      return tag[0];
+    case 2:
+      return tag[0] + tag[1];
+  }
+
+  uint8_t checksum = 0;
+
+  while (LIKELY(tag_len >= 4))
+  {
+    checksum += tag[0] + tag[1] + tag[2] + tag[3];
+    tag += 4;
+    tag_len -= 4;
+  }
+
+  while (LIKELY(tag_len--))
+    checksum += *tag++;
+
+  return checksum;
 }
 
 static uint8_t utoa(uint16_t num, char *buffer)
@@ -195,8 +275,11 @@ static uint8_t utoa(uint16_t num, char *buffer)
   char tmp[sizeof(__m128i)] ALIGNED(16) = {0};
   uint8_t len = 0;
 
-  if (UNLIKELY(num == 0))
-    return (*buffer = '0', 1);
+  if (UNLIKELY(num < 10))
+  {
+    *buffer = '0' + num;
+    return 1;
+  }
 
   while (LIKELY(num >= 100))
   {

@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-17 19:51:20                                                
+last edited: 2025-02-24 16:35:15                                                
 
 ================================================================================*/
 
@@ -123,7 +123,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
   const char *const last = buffer + buffer_size - STR_LEN("10=000\x01");
   const char *const aligned_buffer = align_forward(buffer);
 
-  while (UNLIKELY(buffer < aligned_buffer))
+  while (UNLIKELY(buffer < aligned_buffer && buffer <= last))
   {
     if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
       return buffer;
