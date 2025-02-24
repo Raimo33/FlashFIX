@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-24 17:08:50                                                
+last edited: 2025-02-24 17:33:11                                                
 
 ================================================================================*/
 
@@ -67,22 +67,6 @@ CONSTRUCTOR void ff_deserializer_init(void)
   _128_vec_equals = _mm_set1_epi8('=');
   _128_vec_soh    = _mm_set1_epi8('\x01');
 #endif
-}
-
-bool ff_is_full_message(const char *buffer, UNUSED const uint16_t buffer_size, const uint16_t message_len, ff_error_t *restrict error)
-{
-  constexpr uint8_t begin_string_len = STR_LEN("8=FIX.4.4\x01");
-  constexpr uint8_t min_body_length_len = STR_LEN("9=0\x01");
-  constexpr uint8_t checksum_len = STR_LEN("10=000\x01");
-  constexpr uint8_t total_minimum_len = checksum_len + begin_string_len + min_body_length_len;
-
-  if (message_len < total_minimum_len)
-    return false;
-
-  const bool has_checksum = !!get_checksum_start(buffer, message_len);
-  (void)(error && (*error = FF_MESSAGE_TOO_BIG * (!has_checksum && message_len >= buffer_size)));
-
-  return has_checksum;
 }
 
 //TODO reduce branching
