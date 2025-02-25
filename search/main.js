@@ -1,14 +1,3 @@
-/*================================================================================
-
-File: main.js                                                                   
-Creator: Claudio Raimondi                                                       
-Email: claudio.raimondi@pm.me                                                   
-
-created at: 2025-02-18 16:43:44                                                 
-last edited: 2025-02-18 16:43:44                                                
-
-================================================================================*/
-
 function getSearchTermFromLocation() {
   var sPageURL = window.location.search.substring(1);
   var sURLVariables = sPageURL.split('&');

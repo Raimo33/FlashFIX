@@ -52,24 +52,8 @@
     <li class="toctree-l2"><a class="reference internal" href="#comments">Comments:</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#deserialization">Deserialization</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#avx512">AVX512</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#avx2">AVX2</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#sse">SSE</a>
-    </li>
-        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#serialization">Serialization</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#avx512_1">AVX512</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#avx2_1">AVX2</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#sse_1">SSE</a>
-    </li>
-        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#run-your-own-benchmarks">Run your own benchmarks</a>
     </li>
@@ -124,21 +108,12 @@ Thy're are performed on the static library compiled following the <a href="../in
 <li>The benchmarks were run using only aligned memory, mostly static, with exception for the actual random strings.</li>
 <li>Serialization takes much more time than deserialization, as it involves copying the data to a buffer.</li>
 <li>Deserialization is generally much faster as it uses zero-copy techniques.</li>
+<li>Direct zero-copy serialization with vectorized writev and no memcpy was attempted but resulted in a 3x performance decrease, likely due to the small nature of the FIX fields and tags.</li>
 </ul>
 <h2 id="deserialization">Deserialization</h2>
-<h3 id="avx512">AVX512</h3>
-<p><em>Not tested yet, feel free to contribute!</em></p>
-<h3 id="avx2">AVX2</h3>
-<p><img alt="Deserialization_avx2" src="../../images/deserialize_avx2.png" /></p>
-<h3 id="sse">SSE</h3>
-<p><img alt="Deserialization_sse" src="../../images/deserialize_sse.png" /></p>
+<p><img alt="Deserialization" src="../../images/deserialization.png" /></p>
 <h2 id="serialization">Serialization</h2>
-<h3 id="avx512_1">AVX512</h3>
-<p><em>Not tested yet, feel free to contribute!</em></p>
-<h3 id="avx2_1">AVX2</h3>
-<p><img alt="Serialization_avx2" src="../../images/serialize_avx2.png" /></p>
-<h3 id="sse_1">SSE</h3>
-<p><img alt="Serialization_sse" src="../../images/serialize_sse.png" /></p>
+<p><img alt="Serialization" src="../../images/serialization.png" /></p>
 <h2 id="run-your-own-benchmarks">Run your own benchmarks</h2>
 <p>To run your own benchmarks you can follow the steps below:</p>
 <ul>

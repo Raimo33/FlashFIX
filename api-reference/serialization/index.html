@@ -56,7 +56,7 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Serialization</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#ff_message_fits_in_buffer">ff_message_fits_in_buffer</a>
+    <li class="toctree-l2"><a class="reference internal" href="#ff_serialize">ff_serialize</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description">Description</a>
     </li>
@@ -65,34 +65,6 @@
     <li class="toctree-l3"><a class="reference internal" href="#returns">Returns</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#undefined-behavior">Undefined Behavior</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#errors">Errors</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#ff_serialize">ff_serialize</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#description_1">Description</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#parameters_1">Parameters</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#returns_1">Returns</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#undefined-behavior_1">Undefined Behavior</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#errors_1">Errors</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#ff_finalize">ff_finalize</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#description_2">Description</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#parameters_2">Parameters</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#returns_2">Returns</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#undefined-behavior_2">Undefined Behavior</a>
     </li>
         </ul>
     </li>
@@ -137,47 +109,21 @@
 <pre><code class="language-c">#include &lt;flashfix/serialization.h&gt;
 </code></pre>
 <p>These functions <strong>don't check the validity of messages</strong>, they assume that the message struct is correctly filled with the right values.</p>
-<h2 id="ff_message_fits_in_buffer">ff_message_fits_in_buffer</h2>
-<pre><code class="language-c">bool ff_message_fits_in_buffer(const ff_message_t *restrict message, const uint16_t buffer_size, ff_error_t *restrict error);
+<h2 id="ff_serialize">ff_serialize</h2>
+<pre><code class="language-c">uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message);
 </code></pre>
 <h3 id="description">Description</h3>
-<p>checks if the finalized message derived from the message struct fits in the provided buffer size.</p>
+<p>serializes a fix message into a buffer by concatenating the fields with '=' and '\x01' delimiters and adding the mandatory beginstring, bodylength, and checksum fields.</p>
 <h3 id="parameters">Parameters</h3>
-<ul>
-<li><code>message</code> - the message struct to be serialized</li>
-<li><code>buffer_size</code> - the size of the buffer in bytes</li>
-<li><code>error</code> - an optional pointer to retrieve error information</li>
-</ul>
-<h3 id="returns">Returns</h3>
-<ul>
-<li><code>true</code> if the message fits in the buffer</li>
-<li><code>false</code> if the message does not fit in the buffer</li>
-<li><code>false</code> in case of error</li>
-</ul>
-<h3 id="undefined-behavior">Undefined Behavior</h3>
-<ul>
-<li><code>message</code> is NULL</li>
-<li>message field lengths add up to more than <code>UINT16_MAX</code></li>
-</ul>
-<h3 id="errors">Errors</h3>
-<p><strong>this function does not set any errors</strong></p>
-<h2 id="ff_serialize">ff_serialize</h2>
-<pre><code class="language-c">uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message, ff_error_t *restrict error);
-</code></pre>
-<h3 id="description_1">Description</h3>
-<p>serializes a fix message into a buffer by concatenating the fields with '=' and '\x01' delimiters</p>
-<h3 id="parameters_1">Parameters</h3>
 <ul>
 <li><code>buffer</code> - the buffer where to store the serialized message</li>
 <li><code>message</code> - the message struct containing the fields to serialize</li>
-<li><code>error</code> - an optional pointer to retrieve error information</li>
 </ul>
-<h3 id="returns_1">Returns</h3>
+<h3 id="returns">Returns</h3>
 <ul>
 <li>length of the serialized message in bytes</li>
-<li><code>0</code> in case of error</li>
 </ul>
-<h3 id="undefined-behavior_1">Undefined Behavior</h3>
+<h3 id="undefined-behavior">Undefined Behavior</h3>
 <ul>
 <li><code>buffer</code> is <code>NULL</code></li>
 <li><code>message</code> is <code>NULL</code></li>
@@ -190,29 +136,6 @@
 <li><code>message</code> with empty <code>""</code> field strings </li>
 <li><code>message</code> with <code>value_len == 0</code> or <code>tag_len == 0</code></li>
 <li><code>message</code> with <code>n_fields == 0</code></li>
-</ul>
-<h3 id="errors_1">Errors</h3>
-<p><strong>this function does not set any errors</strong></p>
-<h2 id="ff_finalize">ff_finalize</h2>
-<pre><code class="language-c">uint16_t ff_finalize(char *restrict buffer, const uint16_t len, ff_error_t *restrict error);
-</code></pre>
-<h3 id="description_2">Description</h3>
-<p>computes and adds the final beginstring, bodylength and checksum tags to the serialized message in place</p>
-<h3 id="parameters_2">Parameters</h3>
-<ul>
-<li><code>buffer</code> - the buffer which contains a serialized message minus beginstring, bodylength and checksum</li>
-<li><code>len</code> - the length of the serialized message (portion of the buffer that is full) in bytes</li>
-<li><code>error</code> - an optional pointer to retrieve error information</li>
-</ul>
-<h3 id="returns_2">Returns</h3>
-<ul>
-<li>length of the finalized message in bytes</li>
-<li><code>0</code> in case of error</li>
-</ul>
-<h3 id="undefined-behavior_2">Undefined Behavior</h3>
-<ul>
-<li><code>buffer</code> is <code>NULL</code></li>
-<li><code>buffer</code> is nut big enough to contain the final message</li>
 </ul>
               
             </div>
