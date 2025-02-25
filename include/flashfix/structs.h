@@ -16,22 +16,15 @@ last edited: 2025-02-25 14:58:53
 # include <sys/uio.h>
 
 # ifndef FIX_MAX_FIELDS
-#   define FIX_MAX_FIELDS 256
-# endif
+#  define FIX_MAX_FIELDS 256
+# endif 
 
 typedef struct
 {
-  uint16_t tag_len;
-  uint16_t value_len;
-  char *tag;
-  char *value;
-} ff_field_t;
-
-//TODO SOA (Struct of Arrays): https://en.wikipedia.org/wiki/AoS_and_SoA
-
-typedef struct
-{
-  ff_field_t fields[FIX_MAX_FIELDS];
+  char *tags[FIX_MAX_FIELDS] __attribute__((aligned(64)));
+  char *values[FIX_MAX_FIELDS] __attribute__((aligned(64)));
+  uint16_t tag_lens[FIX_MAX_FIELDS] __attribute__((aligned(64)));
+  uint16_t value_lens[FIX_MAX_FIELDS] __attribute__((aligned(64)));
   uint16_t n_fields;
 } ff_message_t;
 

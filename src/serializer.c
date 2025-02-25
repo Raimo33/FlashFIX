@@ -16,70 +16,63 @@ last edited: 2025-02-25 14:58:53
 #include <sys/uio.h>
 #include <errno.h>
 
-static inline uint16_t compute_body_length(const ff_field_t *fields, uint16_t n_fields);
+static inline uint16_t compute_body_length(const uint16_t *tag_lens, const uint16_t *value_lens, uint16_t n_fields);
+ALWAYS_INLINE static inline int32_t horizontal_sum128(__m128i vec);
 static uint8_t utoa(uint16_t num, char *buffer);
 ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
 ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
 
 #ifdef __AVX512F__
-  static __m512i _512_len_offsets;
-  static __m512i _512_mask_lower_16;
+  //TODO define constants
 #endif
 
 #ifdef __AVX2__
-  static __m256i _256_len_offsets;
-  static __m256i _256_mask_lower_16;
+  //TODO define constants
 #endif
 
 #ifdef __SSE2__
-  static __m128i _128_len_offsets;
-  static __m128i _128_mask_lower_16;
+  //TODO define constants
 #endif
 
 CONSTRUCTOR void ff_serializer_init(void)
 {
-#ifdef __AVX512F__
-  _512_len_offsets = _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-  _512_mask_lower_16 = _mm512_set1_epi32(0xFFFF);
-#endif
-
-#ifdef __AVX2__
-  _256_len_offsets = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
-  _256_mask_lower_16 = _mm256_set1_epi32(0xFFFF);
-#endif
-
-#ifdef __SSE2__
-  _128_len_offsets = _mm_set_epi32(3, 2, 1, 0);
-  _128_mask_lower_16 = _mm_set1_epi32(0xFFFF);
-#endif
+  //TODO initialize constants
 }
 
 uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
 
-  const ff_field_t *fields = message->fields;
-  uint16_t n_fields = message->n_fields;
+  const uint16_t n_fields = message->n_fields;
+  const uint16_t *tag_lens = message->tag_lens;
+  const uint16_t *value_lens = message->value_lens;
+  char *const *tags = message->tags;
+  char *const *values = message->values;
 
   *(uint64_t *)buffer = *(uint64_t *)"8=FIX.4.";
   buffer += 8;
   *(uint32_t *)buffer = *(uint32_t *)"4\x01""9=";
   buffer += 4;
 
-  const uint16_t body_length = compute_body_length(fields, n_fields);
+  const uint16_t body_length = compute_body_length(message->tag_lens, message->value_lens, n_fields);
   const uint8_t body_length_len = utoa(body_length, buffer);
   buffer += body_length_len;
   *buffer++ = '\x01';
 
-  while (LIKELY(n_fields--))
+  //TODO parallelize the copies, by precalculating the offsets
+  for (uint16_t i = 0; LIKELY(i < n_fields); i++)
   {
-    memcpy(buffer, fields->tag, fields->tag_len);
-    buffer += fields->tag_len;
+    const uint16_t tag_len = tag_lens[i];
+    const uint16_t value_len = value_lens[i];
+    const char *tag = tags[i];
+    const char *value = values[i];
+
+    memcpy(buffer, tag, tag_len);
+    buffer += tag_len;
     *buffer++ = '=';
-    memcpy(buffer, fields->value, fields->value_len);
-    buffer += fields->value_len;
+    memcpy(buffer, value, value_len);
+    buffer += value_len;
     *buffer++ = '\x01';
-    fields++;
   }
 
   constexpr char checksum_table[256][4] = {
@@ -121,35 +114,82 @@ uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict messag
   return buffer - buffer_start;
 }
 
-static inline uint16_t compute_body_length(const ff_field_t *fields, uint16_t n_fields)
+static inline uint16_t compute_body_length(const uint16_t *tag_lens, const uint16_t *value_lens, uint16_t n_fields)
 {
   uint16_t total_len = (n_fields << 1);
+  uint16_t i = 0;
 
 #ifdef __AVX512F__
-  while (LIKELY(n_fields >= 16))
+  while (LIKELY(i + 16 <= n_fields))
   {
-    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(ff_field_t));
+    PREFETCHR(tag_lens + i + 16, 3);
+    PREFETCHR(value_lens + i + 16, 3);
 
-    const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
-    const __m512i value_len = _mm512_srli_epi32(lengths, 16);
+    const __m512i tag_lens_chunk = _mm512_load_si512((__m512i *)(tag_lens + i));
+    const __m512i value_lens_chunk = _mm512_load_si512((__m512i *)(value_lens + i));
+    const __m512i sum = _mm512_add_epi16(tag_lens_chunk, value_lens_chunk);
 
-    const __m512i sum = _mm512_add_epi32(tag_len, value_len);
-    total_len += _mm512_reduce_add_epi32(sum);
-
-    n_fields -= 16;
-    fields += 16;
+    total_len += _mm512_reduce_add_epi16(sum);
+    i += 16;
   }
 #endif
 
-//TODO: Implement AVX2 and SSE2 versions (they dont have reduce, so we need to use _mm256_extract_epi32 and _mm_extract_epi32)
-
-  while (LIKELY(n_fields--))
+#ifdef __AVX2__
+  while (LIKELY(i + 8 <= n_fields))
   {
-    total_len += fields->tag_len + fields->value_len;
-    fields++;
+    PREFETCHR(tag_lens + i + 8, 3);
+    PREFETCHR(value_lens + i + 8, 3);
+
+    const __m128i tag_vec   = _mm_loadu_si128((const __m128i *)(tag_lens + i));
+    const __m128i value_vec = _mm_loadu_si128((const __m128i *)(value_lens + i));
+    const __m128i sum16     = _mm_add_epi16(tag_vec, value_vec);
+
+    const __m256i sum32 = _mm256_cvtepu16_epi32(sum16);
+    const __m128i low  = _mm256_castsi256_si128(sum32);
+    const __m128i high = _mm256_extracti128_si256(sum32, 1);
+
+    total_len += horizontal_sum128(low) + horizontal_sum128(high);
+    i += 8;
+  }
+#endif
+
+#ifdef __SSE2__
+  while (LIKELY(i + 8 <= n_fields))
+  {
+    PREFETCHR(tag_lens + i + 8, 3);
+    PREFETCHR(value_lens + i + 8, 3);
+
+    __m128i tag_vec   = _mm_loadu_si128((const __m128i *)(tag_lens + i));
+    __m128i value_vec = _mm_loadu_si128((const __m128i *)(value_lens + i));
+    __m128i sum16     = _mm_add_epi16(tag_vec, value_vec);
+
+    __m128i low  = _mm_unpacklo_epi16(sum16, _mm_setzero_si128());
+    __m128i high = _mm_unpackhi_epi16(sum16, _mm_setzero_si128());
+
+    total_len += horizontal_sum128(low) + horizontal_sum128(high);
+    i += 8;
+  }
+#endif
+
+  while (LIKELY(i < n_fields))
+  {
+    total_len += tag_lens[i] + value_lens[i];
+    i++;
   }
 
   return total_len;
+}
+
+static inline int32_t horizontal_sum128(__m128i vec)
+{
+#ifdef __SSE3__
+  vec = _mm_hadd_epi32(vec, vec);
+  vec = _mm_hadd_epi32(vec, vec);
+#else
+  vec = _mm_add_epi32(vec, _mm_shuffle_epi32(vec, _MM_SHUFFLE(2, 3, 0, 1)));
+  vec = _mm_add_epi32(vec, _mm_shuffle_epi32(vec, _MM_SHUFFLE(1, 0, 3, 2)));
+#endif
+  return _mm_cvtsi128_si32(vec);
 }
 
 static uint8_t utoa(uint16_t num, char *buffer)

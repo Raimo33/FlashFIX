@@ -272,7 +272,10 @@ static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_messa
 {
   const char *const end = buffer + buffer_size;
 
-  ff_field_t *fields = message->fields;
+  char **tags = message->tags;
+  char **values = message->values;
+  uint16_t *tag_lens = message->tag_lens;
+  uint16_t *value_lens = message->value_lens;
 
   while (LIKELY(buffer < end))
   {
@@ -295,12 +298,10 @@ static void tokenize(char *restrict buffer, const uint16_t buffer_size, ff_messa
       return;
     }
 
-    *fields++ = (ff_field_t) {
-      .tag = buffer,
-      .tag_len = tag_len,
-      .value = delim,
-      .value_len = value_len
-    };
+    *tags++ = buffer;
+    *tag_lens++ = tag_len;
+    *values++ = delim;
+    *value_lens++ = value_len;
     message->n_fields++;
 
     buffer = soh;

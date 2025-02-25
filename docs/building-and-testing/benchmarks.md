@@ -10,10 +10,10 @@ Thy're are performed on the static library compiled following the [installation 
   - Direct zero-copy serialization with vectorized writev and no memcpy was attempted but resulted in a 3x performance decrease, likely due to the small nature of the FIX fields and tags.
 
 ## Deserialization
-  ![Deserialization](../images/deserialization.png)
+  ![Deserialization](../images/deserialize.png)
 
 ## Serialization
-  ![Serialization](../images/serialization.png)
+  ![Serialization](../images/serialize.png)
 
 ## Run your own benchmarks
 

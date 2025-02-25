@@ -112,10 +112,10 @@ static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIEL
 
     for (uint16_t j = 0; j <= i; j++)
     {
-      messages[i].fields[j].tag = tags[j];
-      messages[i].fields[j].tag_len = strlen(tags[j]);
-      messages[i].fields[j].value = values[j];
-      messages[i].fields[j].value_len = strlen(values[j]);
+      messages[i].tags[j] = tags[j];
+      messages[i].values[j] = values[j];
+      messages[i].tag_lens[j] = strlen(tags[j]);
+      messages[i].value_lens[j] = strlen(values[j]);
     }
   }
 }

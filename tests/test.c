@@ -29,16 +29,16 @@ static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
   if (a->n_fields != b->n_fields)
     return false;
 
-  for (uint8_t i = 0; i < a->n_fields; i++)
+  const bool tag_lens_are_equal = memcmp(a->tag_lens, b->tag_lens, a->n_fields) == 0;
+  const bool value_lens_are_equal = memcmp(a->value_lens, b->value_lens, a->n_fields) == 0;
+  if (!tag_lens_are_equal || !value_lens_are_equal)
+    return false;
+
+  for (uint16_t i = 0; i < a->n_fields; i++)
   {
-    const bool tag_lens_equal = a->fields[i].tag_len == b->fields[i].tag_len;
-    const bool value_lens_equal = a->fields[i].value_len == b->fields[i].value_len;
-    const bool tags_equal = memcmp(a->fields[i].tag, b->fields[i].tag, a->fields[i].tag_len) == 0;
-    const bool values_equal = memcmp(a->fields[i].value, b->fields[i].value, a->fields[i].value_len) == 0;
-
-    const bool are_equal = tag_lens_equal && value_lens_equal && tags_equal && values_equal;
-
-    if (!are_equal)
+    const bool tags_are_equal = memcmp(a->tags[i], b->tags[i], a->tag_lens[i]) == 0;
+    const bool values_are_equal = memcmp(a->values[i], b->values[i], a->value_lens[i]) == 0;
+    if (!tags_are_equal || !values_are_equal)
       return false;
   }
 
@@ -92,19 +92,13 @@ static char *all_tests(void)
 
 static char *test_serialize_normal_message(void)
 {
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
+  const ff_message_t message = {
+    .tags = { "6", "35", "49", "56", "34", "52", "98", "108" },
+    .tag_lens = { 1, 2, 2, 2, 2, 2, 2, 3 },
+    .values = { "123", "D", "BROKER", "CLIENT", "1", "20250210-18:52:11.000", "0", "30" },
+    .value_lens = { 3, 1, 6, 6, 1, 21, 1, 2 },
     .n_fields = 8
-  };
+  } ;
   constexpr char expected_buffer[] =
     "8=FIX.4.4\x01"
     "9=73\x01"
@@ -130,10 +124,11 @@ static char *test_serialize_normal_message(void)
 
 static char *test_serialize_one_field_message(void)
 {
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 }
-    },
+  const ff_message_t message = {
+    .tags = { "6" },
+    .tag_lens = { 1 },
+    .values = { "123" },
+    .value_lens = { 3 },
     .n_fields = 1
   };
   constexpr char expected_buffer[] =
@@ -166,15 +161,10 @@ static char *test_deserialize_normal_message(void)
     "108=30\x01"
     "10=120\x01";
   static const ff_message_t expected_message = {
-    .fields = {
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
+    .tags = { "35", "49", "56", "34", "52", "98", "108" },
+    .tag_lens = { 2, 2, 2, 2, 2, 2, 3 },
+    .values = { "D", "BROKER", "CLIENT", "1", "20250210-18:52:11.000", "0", "30" },
+    .value_lens = { 1, 6, 6, 1, 21, 1, 2 },
     .n_fields = 7
   };
   constexpr uint16_t expected_len = sizeof(buffer) - 1;
@@ -290,16 +280,11 @@ static char *test_deserialize_no_error_param(void)
     "98=0\x01"
     "108=30\x01"
     "10=120\x01";
-  static const ff_message_t expected_message = {
-    .fields = {
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
+  const ff_message_t expected_message = {
+    .tags = { "35", "49", "56", "34", "52", "98", "108" },
+    .tag_lens = { 2, 2, 2, 2, 2, 2, 3 },
+    .values = { "D", "BROKER", "CLIENT", "1", "20250210-18:52:11.000", "0", "30" },
+    .value_lens = { 1, 6, 6, 1, 21, 1, 2 },
     .n_fields = 7
   };
   constexpr uint16_t expected_len = sizeof(buffer) - 1;
