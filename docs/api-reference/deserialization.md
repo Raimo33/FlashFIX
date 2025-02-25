@@ -30,6 +30,7 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
 ### Undefined Behavior
   - `buffer` is `NULL`
   - `message` is `NULL`
+  - `buffer` does not contain a full message
   - `message->n_fields` is greater than `FIX_MAX_FIELDS`
   - `buffer_size` is different from the actual size of the buffer
   - `buffer` does not contain a full message

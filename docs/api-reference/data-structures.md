@@ -34,11 +34,3 @@ typedef enum
   FF_TOO_MANY_FIELDS,
 } ff_error_t;
 ```
-
-## States
-
-Included in the `flashfix/structs.h` header file.
-
-```c
-typedef struct ff_write_state_t ff_write_state_t;
-```

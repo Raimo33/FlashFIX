@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-24 19:19:48                                                
+last edited: 2025-02-25 14:58:53                                                
 
 ================================================================================*/
 
@@ -45,42 +45,9 @@ static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
   return true;
 }
 
-static bool compare_files(int fd, const char *expected_output)
-{
-  const size_t expected_len = strlen(expected_output);
-  size_t total_read = 0;
-  char buffer[4096];
-  ssize_t bytes_read;
-
-  while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
-  {
-    if (total_read + (size_t)bytes_read > expected_len)
-      return false;
-    if (memcmp(buffer, expected_output + total_read, bytes_read) != 0)
-      return false;
-    total_read += bytes_read;
-  }
-
-  if (bytes_read == -1)
-    return false;
-  if (total_read != expected_len)
-    return false;
-
-  return true;
-}
-
-void flood_fd(int fd)
-{
-  char buf[4096] = {0};
-  while (write(fd, buf, sizeof(buf)) > 0);
-}
-
 static char *all_tests(void);
 static char *test_serialize_normal_message(void);
 static char *test_serialize_one_field_message(void);
-static char *test_serialize_write_normal_message(void);
-static char *test_serialize_write_one_field_message(void);
-static char *test_serialize_write_non_blocking(void);
 static char *test_deserialize_normal_message(void);
 static char *test_deserialize_too_many_fields(void);
 static char *test_deserialize_no_error_param(void);
@@ -109,10 +76,6 @@ static char *all_tests(void)
 {
   mu_run_test(test_serialize_normal_message);
   mu_run_test(test_serialize_one_field_message);
-
-  mu_run_test(test_serialize_write_normal_message);
-  mu_run_test(test_serialize_write_one_field_message);
-  mu_run_test(test_serialize_write_non_blocking);
 
   mu_run_test(test_deserialize_normal_message);
   mu_run_test(test_deserialize_too_many_fields);
@@ -185,109 +148,6 @@ static char *test_serialize_one_field_message(void)
 
   mu_assert("error: serialize one field message: wrong length", len == expected_len);
   mu_assert("error: serialize one field message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
-
-  return 0;
-}
-
-static char *test_serialize_write_normal_message(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 },
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
-    .n_fields = 8
-  };
-  constexpr char expected_output[] =
-    "8=FIX.4.4\x01"
-    "9=73\x01"
-    "6=123\x01"
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01"
-    "10=127\x01";
-  constexpr int32_t expected_len = sizeof(expected_output) - 1;
-
-  int32_t fds[2];
-  mu_assert("error: serialize write normal message: pipe failed", pipe(fds) == 0);
-  ff_write_state_t state = {0};
-  const int32_t len = ff_serialize_write(fds[1], &message, &state);
-  close(fds[1]);
-
-  mu_assert("error: serialize write normal message: wrong len", len == expected_len);
-  mu_assert("error: serialize write normal message: wrong output", compare_files(fds[0], expected_output));
-
-  close(fds[0]);
-
-  return 0;
-}
-
-static char *test_serialize_write_one_field_message(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "6", .tag_len = 1, .value = "123", .value_len = 3 }
-    },
-    .n_fields = 1
-  };
-  constexpr char expected_output[] =
-    "8=FIX.4.4\x01"
-    "9=6\x01"
-    "6=123\x01"
-    "10=216\x01";
-  constexpr int32_t expected_len = sizeof(expected_output) - 1;
-
-  int32_t fds[2];
-  mu_assert("error: serialize write one field message: pipe failed", pipe(fds) == 0);
-  ff_write_state_t state = {0};
-  const int32_t len = ff_serialize_write(fds[1], &message, &state);
-  close(fds[1]);
-
-  mu_assert("error: serialize write one field message: wrong len", len == expected_len);
-  mu_assert("error: serialize write one field message: wrong output", compare_files(fds[0], expected_output));
-
-  close(fds[0]);
-
-  return 0;
-}
-
-static char *test_serialize_write_non_blocking(void)
-{
-  static const ff_message_t message = {
-    .fields = {
-      { .tag = "35", .tag_len = 2, .value = "D", .value_len = 1 },
-      { .tag = "49", .tag_len = 2, .value = "BROKER", .value_len = 6 },
-      { .tag = "56", .tag_len = 2, .value = "CLIENT", .value_len = 6 },
-      { .tag = "34", .tag_len = 2, .value = "1", .value_len = 1 },
-      { .tag = "52", .tag_len = 2, .value = "20250210-18:52:11.000", .value_len = 21 },
-      { .tag = "98", .tag_len = 2, .value = "0", .value_len = 1 },
-      { .tag = "108", .tag_len = 3, .value = "30", .value_len = 2 }
-    },
-    .n_fields = 7
-  };
-  constexpr int32_t expected_len = -1;
-
-  int32_t fds[2];
-  mu_assert("error: serialize write non-blocking: pipe failed", pipe(fds) == 0);
-  mu_assert("error: serialize write non-blocking: fcntl failed", fcntl(fds[1], F_SETFL, O_NONBLOCK) != -1);
-  ff_write_state_t state = {0};
-  flood_fd(fds[1]);
-  int32_t len = ff_serialize_write(fds[1], &message, &state);
-  close(fds[1]);
-
-  mu_assert("error: serialize write non-blocking: wrong length", len == expected_len);
-
-  close(fds[0]);
 
   return 0;
 }

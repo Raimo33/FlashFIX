@@ -7,24 +7,13 @@ Thy're are performed on the static library compiled following the [installation 
   - The benchmarks were run using only aligned memory, mostly static, with exception for the actual random strings.
   - Serialization takes much more time than deserialization, as it involves copying the data to a buffer.
   - Deserialization is generally much faster as it uses zero-copy techniques.
+  - Direct zero-copy serialization with vectorized writev and no memcpy was attempted but resulted in a 3x performance decrease, likely due to the small nature of the FIX fields and tags.
 
 ## Deserialization
-
-### AVX512
-  *Not tested yet, feel free to contribute!*
-### AVX2
-  ![Deserialization_avx2](../images/deserialize_avx2.png)
-### SSE
-  ![Deserialization_sse](../images/deserialize_sse.png)
+  ![Deserialization](../images/deserialization.png)
 
 ## Serialization
-
-### AVX512
-  *Not tested yet, feel free to contribute!*
-### AVX2
-  ![Serialization_avx2](../images/serialize_avx2.png)
-### SSE
-  ![Serialization_sse](../images/serialize_sse.png)
+  ![Serialization](../images/serialization.png)
 
 ## Run your own benchmarks
 
