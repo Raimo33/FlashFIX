@@ -18,6 +18,5 @@ last edited: 2025-02-24 17:33:11
 # include "errors.h"
 
 uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
-//TODO ff_deserialize_read, which reads with readv directly from the buffer and zerocopies the message into the struct
 
 #endif

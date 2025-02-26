@@ -19,8 +19,10 @@ set(FLASHFIX_SOURCES
 
 set(FLASHFIX_PUBLIC_HEADERS
   include/flashfix.h
-  include/flashfix/deserializer.h
-  include/flashfix/serializer.h
+  include/deserializer.h
+  include/serializer.h
+  include/structs.h
+  include/errors.h
 )
 
 set(FLASHFIX_COMPILE_OPTIONS
