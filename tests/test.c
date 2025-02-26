@@ -24,7 +24,7 @@ last edited: 2025-02-25 14:58:53
 
 int tests_run = 0;
 
-static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
+static bool compare_messages(const fix_message_t *a, const fix_message_t *b)
 {
   if (a->n_fields != b->n_fields)
     return false;
@@ -98,7 +98,7 @@ static char *all_tests(void)
 
 static char *test_serialize_normal_message(void)
 {
-  const ff_message_t message = {
+  const fix_message_t message = {
     .fields = {
       { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" },
       { .tag_len = 2, .value_len = 1, .tag = "35", .value = "D" },
@@ -136,7 +136,7 @@ static char *test_serialize_normal_message(void)
 
 static char *test_serialize_one_field_message(void)
 {
-  const ff_message_t message = {
+  const fix_message_t message = {
     .fields = {
       { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" }
     },
@@ -160,7 +160,7 @@ static char *test_serialize_one_field_message(void)
 
 static char *test_serialize_raw_normal_message(void)
 {
-  const ff_message_t message = {
+  const fix_message_t message = {
     .fields = {
       { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" },
       { .tag_len = 2, .value_len = 1, .tag = "35", .value = "D" },
@@ -195,7 +195,7 @@ static char *test_serialize_raw_normal_message(void)
 
 static char *test_serialize_raw_one_field_message(void)
 {
-  const ff_message_t message = {
+  const fix_message_t message = {
     .fields = {
       { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" }
     },
@@ -228,7 +228,7 @@ static char *test_deserialize_normal_message(void)
     "98=0\x01"
     "108=30\x01"
     "10=127\x01";
-  static const ff_message_t expected_message = {
+  static const fix_message_t expected_message = {
     .fields = {
       { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" },
       { .tag_len = 2, .value_len = 1, .tag = "35", .value = "D" },
@@ -243,7 +243,7 @@ static char *test_deserialize_normal_message(void)
   };
   constexpr uint16_t expected_len = sizeof(buffer) - 1;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize normal message: wrong length", len == expected_len);
@@ -327,7 +327,7 @@ static char *test_deserialize_too_many_fields(void)
     "10=014\x01";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize too many fields: wrong length", len == expected_len);
@@ -349,7 +349,7 @@ static char *test_deserialize_no_beginstr(void)
     "10=87\x01";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize no begin string: wrong length", len == expected_len);
@@ -371,7 +371,7 @@ static char *test_deserialize_no_body_length(void)
     "10=148";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize no body length: wrong length", len == expected_len);
@@ -394,7 +394,7 @@ static char *test_deserialize_wrong_beginstr(void)
     "10=118\x01";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong beginstr: wrong length", len == expected_len);
@@ -417,7 +417,7 @@ static char *test_deserialize_wrong_body_length1(void)
     "10=121\x01";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong bodylength 1: wrong length", len == expected_len);
@@ -440,7 +440,7 @@ static char *test_deserialize_wrong_body_length2(void)
     "10=119\x01";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong bodylength 2: wrong length", len == expected_len);
@@ -463,7 +463,7 @@ static char *test_deserialize_checksum_mismatch(void)
     "10=255\x01";
   constexpr uint16_t expected_len = 0;
 
-  ff_message_t message;
+  fix_message_t message;
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize checksum mismatch: wrong length", len == expected_len);

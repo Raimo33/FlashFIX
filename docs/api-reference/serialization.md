@@ -11,7 +11,7 @@ These functions **don't check the validity of messages**, they assume that the m
 ## ff_serialize
 
 ```c
-uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message);
+uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict message);
 ```
 
 ### Description
@@ -40,7 +40,7 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
 ## ff_serialize_raw
 
 ```c
-uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict message);
+uint16_t ff_serialize_raw(char *restrict buffer, const fix_message_t *restrict message);
 ```
 
 ### Description

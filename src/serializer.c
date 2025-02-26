@@ -16,7 +16,7 @@ last edited: 2025-02-25 14:58:53
 #include <sys/uio.h>
 #include <errno.h>
 
-static inline uint16_t compute_body_length(const ff_field_t *fields, uint16_t n_fields);
+static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t n_fields);
 ALWAYS_INLINE static inline int32_t horizontal_sum128(__m128i vec);
 static uint8_t utoa(uint16_t num, char *buffer);
 ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
@@ -43,12 +43,12 @@ CONSTRUCTOR void ff_serializer_init(void)
 #endif
 }
 
-uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message)
+uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
 
   const uint16_t n_fields = message->n_fields;
-  const ff_field_t *fields = message->fields;
+  const fix_field_t *fields = message->fields;
 
   *(uint64_t *)buffer = *(uint64_t *)"8=FIX.4.";
   buffer += 8;
@@ -116,12 +116,12 @@ uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict messag
   return buffer - buffer_start;
 }
 
-uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict message)
+uint16_t ff_serialize_raw(char *restrict buffer, const fix_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
 
   const uint16_t n_fields = message->n_fields;
-  const ff_field_t *fields = message->fields;
+  const fix_field_t *fields = message->fields;
 
   for (uint16_t i = 0; LIKELY(i < n_fields); i++)
   {
@@ -143,14 +143,14 @@ uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict me
   return buffer - buffer_start;
 }
 
-static inline uint16_t compute_body_length(const ff_field_t *fields, uint16_t n_fields)
+static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t n_fields)
 {
   uint16_t total_len = (n_fields << 1);
 
 #ifdef __AVX512F__
   while (LIKELY(n_fields >= 16))
   {
-    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(ff_field_t));
+    const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(fix_field_t));
 
     const __m512i tag_len = _mm512_and_si512(lengths, _512_mask_lower_16);
     const __m512i value_len = _mm512_srli_epi32(lengths, 16);

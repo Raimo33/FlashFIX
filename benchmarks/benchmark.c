@@ -32,11 +32,11 @@ last edited: 2025-02-25 14:58:53
 
 static void init_random_tags(char *tags[FIX_MAX_FIELDS]);
 static void init_random_values(char *values[FIX_MAX_FIELDS]);
-static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
+static void fill_message_structs(fix_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
-static void serialize(ff_message_t messages[FIX_MAX_FIELDS]);
-static void serialize_raw(ff_message_t messages[FIX_MAX_FIELDS]);
+static void serialize(fix_message_t messages[FIX_MAX_FIELDS]);
+static void serialize_raw(fix_message_t messages[FIX_MAX_FIELDS]);
 static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static bool fits_buffer(char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len);
@@ -63,7 +63,7 @@ int32_t main(void)
   } while (!fits_buffer(tags, values));
   
   {
-    ff_message_t message_structs[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
+    fix_message_t message_structs[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
     
     fill_message_structs(message_structs, tags, values);
     
@@ -106,7 +106,7 @@ static void init_random_values(char *values[FIX_MAX_FIELDS])
     values[i] = generate_random_string(charset, charset_len, MEAN_VALUE_LEN, MAX_VALUE_LEN);
 }
 
-static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS])
+static void fill_message_structs(fix_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS])
 {
   for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
   {
@@ -114,7 +114,7 @@ static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIEL
 
     for (uint16_t j = 0; j <= i; j++)
     {
-      messages[i].fields[j] = (ff_field_t){
+      messages[i].fields[j] = (fix_field_t){
         .tag_len = strlen(tags[j]),
         .value_len = strlen(values[j]),
         .tag = tags[j],
@@ -156,7 +156,7 @@ static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char 
     message_lengths[i] = strlen(message_buffers[i]);
 }
 
-static void serialize(ff_message_t messages[FIX_MAX_FIELDS])
+static void serialize(fix_message_t messages[FIX_MAX_FIELDS])
 {
   const int32_t fd = open_p("benchmark_serialize.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
   
@@ -180,7 +180,7 @@ static void serialize(ff_message_t messages[FIX_MAX_FIELDS])
   close(fd);
 }
 
-static void serialize_raw(ff_message_t messages[FIX_MAX_FIELDS])
+static void serialize_raw(fix_message_t messages[FIX_MAX_FIELDS])
 {
   const int32_t fd = open_p("benchmark_serialize_raw.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
   
@@ -211,7 +211,7 @@ static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE])
   uint64_t start, end;
   uint32_t aux;
 
-  ff_message_t message ALIGNED(ALIGNMENT) = {0};
+  fix_message_t message ALIGNED(ALIGNMENT) = {0};
 
   dprintf(fd, "# of fields, # of cpu cycles\n");
   for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)

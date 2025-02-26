@@ -11,7 +11,7 @@ These functions **only verify the structural integrity** of messages in terms of
 ## ff_deserialize
 
 ```c
-uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message);
+uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message);
 ```
 
 ### Description

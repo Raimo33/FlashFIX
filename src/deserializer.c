@@ -15,7 +15,7 @@ last edited: 2025-02-24 17:33:11
 
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
 static inline bool check_zero_equal_soh(const char *buffer);
-static bool tokenize(const char *buffer, const char *const end, ff_message_t *restrict message);
+static bool tokenize(const char *buffer, const char *const end, fix_message_t *restrict message);
 static uint32_t atoui(const char *str, const char **endptr);
 static inline uint32_t mul10(uint32_t n);
 
@@ -65,7 +65,7 @@ CONSTRUCTOR void ff_deserializer_init(void)
 #endif
 }
 
-uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, ff_message_t *restrict message)
+uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, fix_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
   
@@ -230,9 +230,9 @@ static inline bool check_zero_equal_soh(const char *buffer)
   return *(uint16_t *)(buffer) == *(uint16_t *)"0=" && buffer[5] == '\x01';
 }
 
-static bool tokenize(const char *buffer, const char *const end, ff_message_t *restrict message)
+static bool tokenize(const char *buffer, const char *const end, fix_message_t *restrict message)
 {
-  ff_field_t *fields = message->fields;
+  fix_field_t *fields = message->fields;
 
   message->n_fields = 0;
   while (LIKELY(buffer < end))
@@ -248,7 +248,7 @@ static bool tokenize(const char *buffer, const char *const end, ff_message_t *re
     if (UNLIKELY(message->n_fields++ == FIX_MAX_FIELDS))
       return false;
 
-    *fields++ = (ff_field_t){
+    *fields++ = (fix_field_t){
       .tag = buffer,
       .value = delim,
       .tag_len = tag_len,
@@ -258,7 +258,7 @@ static bool tokenize(const char *buffer, const char *const end, ff_message_t *re
     buffer = soh;
   }
 
-  bzero(fields, sizeof(ff_field_t) * (FIX_MAX_FIELDS - message->n_fields));
+  bzero(fields, sizeof(fix_field_t) * (FIX_MAX_FIELDS - message->n_fields));
 
   return true;
 }
