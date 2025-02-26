@@ -15,7 +15,7 @@ last edited: 2025-02-24 17:33:11
 
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
 static inline bool check_zero_equal_soh(const char *buffer);
-static bool tokenize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message);
+static bool tokenize(const char *buffer, const char *const end, ff_message_t *restrict message);
 static uint32_t atoui(const char *str, const char **endptr);
 static inline uint32_t mul10(uint32_t n);
 
@@ -67,7 +67,6 @@ CONSTRUCTOR void ff_deserializer_init(void)
 
 uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, ff_message_t *restrict message)
 {
-  bzero(message, sizeof(ff_message_t));
   const char *const buffer_start = buffer;
   
   if (UNLIKELY(memcmp(buffer, "8=FIX.4.4\x01", 10)))
@@ -103,7 +102,7 @@ uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, ff_messa
 
   buffer += STR_LEN("\x01");
 
-  if (UNLIKELY(!tokenize(body_start, body_length, message)))
+  if (UNLIKELY(!tokenize(body_start, checksum_start, message)))
     return 0;
 
   return buffer - buffer_start;
@@ -231,15 +230,11 @@ static inline bool check_zero_equal_soh(const char *buffer)
   return *(uint16_t *)(buffer) == *(uint16_t *)"0=" && buffer[5] == '\x01';
 }
 
-static bool tokenize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message)
+static bool tokenize(const char *buffer, const char *const end, ff_message_t *restrict message)
 {
-  const char *const end = buffer + buffer_size;
+  ff_field_t *fields = message->fields;
 
-  const char **tags = message->tags;
-  const char **values = message->values;
-  uint16_t *tag_lens = message->tag_lens;
-  uint16_t *value_lens = message->value_lens;
-
+  message->n_fields = 0;
   while (LIKELY(buffer < end))
   {
     char *delim = memchr(buffer, '=', end - buffer);
@@ -250,17 +245,20 @@ static bool tokenize(const char *restrict buffer, const uint16_t buffer_size, ff
     const uint16_t value_len = soh - delim;
     *soh++ = '\0';
 
-    if (UNLIKELY(message->n_fields == FIX_MAX_FIELDS))
+    if (UNLIKELY(message->n_fields++ == FIX_MAX_FIELDS))
       return false;
 
-    *tags++ = buffer;
-    *tag_lens++ = tag_len;
-    *values++ = delim;
-    *value_lens++ = value_len;
-    message->n_fields++;
+    *fields++ = (ff_field_t){
+      .tag = buffer,
+      .value = delim,
+      .tag_len = tag_len,
+      .value_len = value_len
+    };
 
     buffer = soh;
   }
+
+  bzero(fields, sizeof(ff_field_t) * (FIX_MAX_FIELDS - message->n_fields));
 
   return true;
 }

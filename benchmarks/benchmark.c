@@ -114,10 +114,12 @@ static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIEL
 
     for (uint16_t j = 0; j <= i; j++)
     {
-      messages[i].tags[j] = tags[j];
-      messages[i].values[j] = values[j];
-      messages[i].tag_lens[j] = strlen(tags[j]);
-      messages[i].value_lens[j] = strlen(values[j]);
+      messages[i].fields[j] = (ff_field_t){
+        .tag_len = strlen(tags[j]),
+        .value_len = strlen(values[j]),
+        .tag = tags[j],
+        .value = values[j]
+      };
     }
   }
 }
@@ -216,7 +218,7 @@ static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE])
   {
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
-      ff_deserialize(buffers[i], BUFFER_SIZE, &message, NULL);
+      ff_deserialize(buffers[i], BUFFER_SIZE, &message);
     end = __rdtscp(&aux);
   
     const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
