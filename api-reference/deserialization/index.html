@@ -72,6 +72,18 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ff_is_complete">ff_is_complete</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_1">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#parameters_1">Parameters</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_1">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#undefined-behavior_1">Undefined Behavior</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../data-structures/">Data Structures</a>
@@ -112,7 +124,7 @@
 </code></pre>
 <p>These functions <strong>only verify the structural integrity</strong> of messages in terms of format, checksum, and body length. They do not validate the correctness of the messages (e.g. duplicate tags, invalid values, etc.).</p>
 <h2 id="ff_deserialize">ff_deserialize</h2>
-<pre><code class="language-c">uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
+<pre><code class="language-c">uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message);
 </code></pre>
 <h3 id="description">Description</h3>
 <p>deserializes a fix message by tokenizing the buffer <strong>in place</strong>: replacing <code>'='</code> and <code>'\x01'</code> delimiters with <code>'\0'</code> and store pointers to the beginning of each field in the message struct</p>
@@ -121,12 +133,11 @@
 <li><code>buffer</code> - the buffer which contains the full serialized message</li>
 <li><code>buffer_size</code> - the size of the buffer in bytes</li>
 <li><code>message</code> - the message struct where to store the deserialized fields</li>
-<li><code>error</code> - an optional pointer to retrieve error information</li>
 </ul>
 <h3 id="returns">Returns</h3>
 <ul>
 <li>length of the deserialized message in bytes</li>
-<li><code>0</code> in case of error</li>
+<li><code>0</code> in case of error (see below)</li>
 </ul>
 <h3 id="undefined-behavior">Undefined Behavior</h3>
 <ul>
@@ -140,9 +151,30 @@
 </ul>
 <h3 id="errors">Errors</h3>
 <ul>
-<li><code>FF_INVALID_MESSAGE</code> - the message does not contain mandatory tags</li>
-<li><code>FF_BODY_LENGTH_MISMATCH</code> - the body length tag does not match the actual body length</li>
-<li><code>FF_CHECKSUM_MISMATCH</code> - the checksum tag does not match the actual checksum</li>
+<li>wrong beginstring</li>
+<li>no body length</li>
+<li>checksum mismatch</li>
+<li>body length mismatch</li>
+</ul>
+<h2 id="ff_is_complete">ff_is_complete</h2>
+<pre><code class="language-c">bool ff_is_complete(const char *buffer, const uint16_t len);
+</code></pre>
+<h3 id="description_1">Description</h3>
+<p>checks if a buffer contains a full fix message (i.e. it ends with a checksum followed by a <code>'\x01'</code> delimiter)</p>
+<h3 id="parameters_1">Parameters</h3>
+<ul>
+<li><code>buffer</code> - the buffer which contains the full serialized message</li>
+<li><code>len</code> - the length of the filled part of the buffer in bytes</li>
+</ul>
+<h3 id="returns_1">Returns</h3>
+<ul>
+<li><code>true</code> if the buffer contains a full message</li>
+<li><code>false</code> otherwise</li>
+</ul>
+<h3 id="undefined-behavior_1">Undefined Behavior</h3>
+<ul>
+<li><code>buffer</code> is <code>NULL</code></li>
+<li><code>len</code> is <code>0</code></li>
 </ul>
               
             </div>

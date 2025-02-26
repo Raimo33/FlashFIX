@@ -62,8 +62,6 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#messages">Messages</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#errors">Errors</a>
-    </li>
     </ul>
                   </li>
               </ul>
@@ -107,17 +105,6 @@
   uint16_t value_lens[FIX_MAX_FIELDS];
   uint16_t n_fields;
 } ff_message_t;
-</code></pre>
-<h2 id="errors">Errors</h2>
-<p>Included in the <code>flashfix/errors.h</code> header file.</p>
-<pre><code class="language-c">typedef enum
-{
-  FF_OK = 0,
-  FF_INVALID_MESSAGE,
-  FF_BODY_LENGTH_MISMATCH,
-  FF_CHECKSUM_MISMATCH,
-  FF_TOO_MANY_FIELDS,
-} ff_error_t;
 </code></pre>
               
             </div>
