@@ -13,7 +13,6 @@ last edited: 2025-02-25 14:58:53
 # define STRUCTS_H
 
 # include <stdint.h>
-# include <sys/uio.h>
 
 # ifndef FIX_MAX_FIELDS
 #  define FIX_MAX_FIELDS 256
