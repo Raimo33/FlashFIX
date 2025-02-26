@@ -12,8 +12,6 @@ last edited: 2025-02-25 14:58:53
 #include "common.h"
 #include "serializer.h"
 #include <string.h>
-#include <unistd.h>
-#include <sys/uio.h>
 #include <errno.h>
 
 static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t n_fields);

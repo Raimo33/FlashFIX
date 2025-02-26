@@ -14,7 +14,6 @@ last edited: 2025-02-25 14:58:53
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/uio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 
