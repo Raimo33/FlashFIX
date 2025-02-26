@@ -22,7 +22,6 @@ set(FLASHFIX_PUBLIC_HEADERS
   include/deserializer.h
   include/serializer.h
   include/structs.h
-  include/errors.h
 )
 
 set(FLASHFIX_COMPILE_OPTIONS

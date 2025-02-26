@@ -9,7 +9,7 @@ Undefined behaviour is what allows the library to be fast and efficient. **Progr
 ## Usage
 
 The library is divided into two main parts: serialization and deserialization.
-Both parts share the same [data structures](data-structures.md) for messages and errors.
+Both parts share the same [data structures](data-structures.md).
 
 You can include both the serialization and deserialization headers in your project by including the main header file:
 
