@@ -11,9 +11,8 @@ last edited: 2025-02-24 16:35:15
 
 #include "common.h"
 
-uint8_t compute_checksum(const char *buffer, const uint16_t len)
+uint8_t compute_checksum(const char *buffer, const char *end)
 {
-  const char *const end = buffer + len;
   uint8_t checksum = 0;
   const char *aligned_buffer = align_forward(buffer);
 

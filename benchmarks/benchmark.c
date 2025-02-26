@@ -36,6 +36,7 @@ static void fill_message_structs(ff_message_t *messages, char *tags[FIX_MAX_FIEL
 static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static void serialize(ff_message_t messages[FIX_MAX_FIELDS]);
+static void serialize_raw(ff_message_t messages[FIX_MAX_FIELDS]);
 static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
 static bool fits_buffer(char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len);
@@ -67,6 +68,7 @@ int32_t main(void)
     fill_message_structs(message_structs, tags, values);
     
     serialize(message_structs);
+    serialize_raw(message_structs);
   }
   
   {
@@ -167,6 +169,30 @@ static void serialize(ff_message_t messages[FIX_MAX_FIELDS])
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
       ff_serialize(buffer, &messages[i]);
+    end = __rdtscp(&aux);
+  
+    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
+    dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
+  }
+
+  close(fd);
+}
+
+static void serialize_raw(ff_message_t messages[FIX_MAX_FIELDS])
+{
+  const int32_t fd = open_p("benchmark_serialize_raw.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
+  
+  uint64_t start, end;
+  uint32_t aux;
+
+  char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
+
+  dprintf(fd, "# of fields, # of cpu cycles\n");
+  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  {
+    start = __rdtscp(&aux);
+    for (uint32_t j = 0; j < N_ITERATIONS; j++)
+      ff_serialize_raw(buffer, &messages[i]);
     end = __rdtscp(&aux);
   
     const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;

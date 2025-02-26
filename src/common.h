@@ -20,7 +20,7 @@ last edited: 2025-02-17 19:51:20
 
 # define STR_LEN(x) (sizeof(x) - 1)
 
-INTERNAL uint8_t compute_checksum(const char *buffer, const uint16_t len);
+INTERNAL uint8_t compute_checksum(const char *buffer, const char *end);
 INTERNAL ALWAYS_INLINE inline void *align_forward(const void *ptr)
 {
 #ifdef __AVX512F__

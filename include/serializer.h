@@ -15,8 +15,8 @@ last edited: 2025-02-25 14:58:53
 # include <stdint.h>
 
 # include "structs.h"
-# include "errors.h"
 
 uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message);
+uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict message);
 
 #endif

@@ -36,3 +36,32 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
   - `message` with empty `""` field strings 
   - `message` with `value_len == 0` or `tag_len == 0`
   - `message` with `n_fields == 0`
+
+## ff_serialize_raw
+
+```c
+uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict message);
+```
+
+### Description
+serializes a fix message into a buffer by concatenating the fields with '=' and '\x01' delimiters.
+
+### Parameters
+  - `buffer` - the buffer where to store the serialized message
+  - `message` - the message struct containing the fields to serialize
+
+### Returns
+  - length of the serialized message in bytes
+
+### Undefined Behavior
+  - `buffer` is `NULL`
+  - `message` is `NULL`
+  - `message` doesn't fit in the buffer
+  - value_len and `tag_len` are different from the actual length of the value and tag
+  - `n_fields` is different from the actual number of fields in the message
+  - non printable characters
+  - `message` with `NULL` fields
+  - `message` with empty `{}` fields array
+  - `message` with empty `""` field strings 
+  - `message` with `value_len == 0` or `tag_len == 0`
+  - `message` with `n_fields == 0`

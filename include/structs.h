@@ -21,8 +21,8 @@ last edited: 2025-02-25 14:58:53
 
 typedef struct
 {
-  char *tags[FIX_MAX_FIELDS] __attribute__((aligned(64)));
-  char *values[FIX_MAX_FIELDS] __attribute__((aligned(64)));
+  const char *tags[FIX_MAX_FIELDS] __attribute__((aligned(64)));
+  const char *values[FIX_MAX_FIELDS] __attribute__((aligned(64)));
   uint16_t tag_lens[FIX_MAX_FIELDS] __attribute__((aligned(64)));
   uint16_t value_lens[FIX_MAX_FIELDS] __attribute__((aligned(64)));
   uint16_t n_fields;

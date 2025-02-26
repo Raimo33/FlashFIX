@@ -15,8 +15,8 @@ last edited: 2025-02-24 17:33:11
 # include <stdint.h>
 
 # include "structs.h"
-# include "errors.h"
 
-uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
+uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message);
+bool ff_is_complete(const char *buffer, const uint16_t len);
 
 #endif

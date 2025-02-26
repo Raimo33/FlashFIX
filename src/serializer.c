@@ -10,7 +10,7 @@ last edited: 2025-02-25 14:58:53
 ================================================================================*/
 
 #include "common.h"
-#include <flashfix/serializer.h>
+#include "serializer.h"
 #include <string.h>
 #include <unistd.h>
 #include <sys/uio.h>
@@ -46,8 +46,8 @@ uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict messag
   const uint16_t n_fields = message->n_fields;
   const uint16_t *tag_lens = message->tag_lens;
   const uint16_t *value_lens = message->value_lens;
-  char *const *tags = message->tags;
-  char *const *values = message->values;
+  const char *const *tags = message->tags;
+  const char *const *values = message->values;
 
   *(uint64_t *)buffer = *(uint64_t *)"8=FIX.4.";
   buffer += 8;
@@ -104,12 +104,40 @@ uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict messag
     {"250\x01"}, {"251\x01"}, {"252\x01"}, {"253\x01"}, {"254\x01"}, {"255\x01"}
   };
 
-  const uint8_t checksum = compute_checksum(buffer_start, buffer - buffer_start);
+  const uint8_t checksum = compute_checksum(buffer_start, buffer);
   *(uint32_t *)buffer = *(uint32_t *)"10=";
   buffer += 3;
 
   *(uint32_t *)buffer = *(uint32_t *)checksum_table[checksum];
   buffer += 4;
+
+  return buffer - buffer_start;
+}
+
+uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict message)
+{
+  const char *const buffer_start = buffer;
+
+  const uint16_t n_fields = message->n_fields;
+  const uint16_t *tag_lens = message->tag_lens;
+  const uint16_t *value_lens = message->value_lens;
+  const char *const *tags = message->tags;
+  const char *const *values = message->values;
+
+  for (uint16_t i = 0; LIKELY(i < n_fields); i++)
+  {
+    const uint16_t tag_len = tag_lens[i];
+    const uint16_t value_len = value_lens[i];
+    const char *tag = tags[i];
+    const char *value = values[i];
+
+    memcpy(buffer, tag, tag_len);
+    buffer += tag_len;
+    *buffer++ = '=';
+    memcpy(buffer, value, value_len);
+    buffer += value_len;
+    *buffer++ = '\x01';
+  }
 
   return buffer - buffer_start;
 }

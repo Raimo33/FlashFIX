@@ -48,15 +48,18 @@ static bool compare_messages(const ff_message_t *a, const ff_message_t *b)
 static char *all_tests(void);
 static char *test_serialize_normal_message(void);
 static char *test_serialize_one_field_message(void);
+static char *test_serialize_raw_normal_message(void);
+static char *test_serialize_raw_one_field_message(void);
 static char *test_deserialize_normal_message(void);
 static char *test_deserialize_too_many_fields(void);
-static char *test_deserialize_no_error_param(void);
 static char *test_deserialize_no_beginstr(void);
 static char *test_deserialize_no_body_length(void);
 static char *test_deserialize_wrong_beginstr(void);
 static char *test_deserialize_wrong_body_length1(void);
 static char *test_deserialize_wrong_body_length2(void);
 static char *test_deserialize_checksum_mismatch(void);
+static char *test_is_complete_positive(void);
+static char *test_is_complete_negative(void);
 
 int main(void)
 {
@@ -77,15 +80,20 @@ static char *all_tests(void)
   mu_run_test(test_serialize_normal_message);
   mu_run_test(test_serialize_one_field_message);
 
+  mu_run_test(test_serialize_raw_normal_message);
+  mu_run_test(test_serialize_raw_one_field_message);
+
   mu_run_test(test_deserialize_normal_message);
   mu_run_test(test_deserialize_too_many_fields);
-  mu_run_test(test_deserialize_no_error_param);
   mu_run_test(test_deserialize_no_beginstr);
   mu_run_test(test_deserialize_no_body_length);
   mu_run_test(test_deserialize_wrong_beginstr);
   mu_run_test(test_deserialize_wrong_body_length1);
   mu_run_test(test_deserialize_wrong_body_length2);
   mu_run_test(test_deserialize_checksum_mismatch);
+
+  mu_run_test(test_is_complete_positive);
+  mu_run_test(test_is_complete_negative);
 
   return 0;
 }
@@ -147,6 +155,57 @@ static char *test_serialize_one_field_message(void)
   return 0;
 }
 
+static char *test_serialize_raw_normal_message(void)
+{
+  const ff_message_t message = {
+    .tags = { "6", "35", "49", "56", "34", "52", "98", "108" },
+    .tag_lens = { 1, 2, 2, 2, 2, 2, 2, 3 },
+    .values = { "123", "D", "BROKER", "CLIENT", "1", "20250210-18:52:11.000", "0", "30" },
+    .value_lens = { 3, 1, 6, 6, 1, 21, 1, 2 },
+    .n_fields = 8
+  };
+  constexpr char expected_buffer[] =
+    "6=123\x01"
+    "35=D\x01"
+    "49=BROKER\x01"
+    "56=CLIENT\x01"
+    "34=1\x01"
+    "52=20250210-18:52:11.000\x01"
+    "98=0\x01"
+    "108=30\x01";
+  constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
+
+  char buffer[sizeof(expected_buffer)];
+  uint16_t len = ff_serialize_raw(buffer, &message);
+
+  mu_assert("error: serialize raw normal message: wrong length", len == expected_len);
+  mu_assert("error: serialize raw normal message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+
+  return 0;
+}
+
+static char *test_serialize_raw_one_field_message(void)
+{
+  const ff_message_t message = {
+    .tags = { "6" },
+    .tag_lens = { 1 },
+    .values = { "123" },
+    .value_lens = { 3 },
+    .n_fields = 1
+  };
+  constexpr char expected_buffer[] =
+    "6=123\x01";
+  constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
+
+  char buffer[sizeof(expected_buffer)];
+  uint16_t len = ff_serialize_raw(buffer, &message);
+
+  mu_assert("error: serialize raw one field message: wrong length", len == expected_len);
+  mu_assert("error: serialize raw one field message: wrong buffer", memcmp(buffer, expected_buffer, len) == 0);
+
+  return 0;
+}
+
 static char *test_deserialize_normal_message(void)
 {
   char buffer[] = 
@@ -168,14 +227,11 @@ static char *test_deserialize_normal_message(void)
     .n_fields = 7
   };
   constexpr uint16_t expected_len = sizeof(buffer) - 1;
-  constexpr ff_error_t expected_error = FF_OK;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize normal message: wrong length", len == expected_len);
-  mu_assert("error: deserialize normal message: wrong error", error == expected_error);
   mu_assert("error: deserialize normal message: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
@@ -255,45 +311,11 @@ static char *test_deserialize_too_many_fields(void)
     "65=field65\x01"
     "10=014\x01";
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_TOO_MANY_FIELDS;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize too many fields: wrong length", len == expected_len);
-  mu_assert("error: deserialize too many fields: wrong error", error == expected_error);
-
-  return 0;
-}
-
-static char *test_deserialize_no_error_param(void)
-{
-  char buffer[] = 
-    "8=FIX.4.4\x01"
-    "9=67\x01"
-    "35=D\x01"
-    "49=BROKER\x01"
-    "56=CLIENT\x01"
-    "34=1\x01"
-    "52=20250210-18:52:11.000\x01"
-    "98=0\x01"
-    "108=30\x01"
-    "10=120\x01";
-  const ff_message_t expected_message = {
-    .tags = { "35", "49", "56", "34", "52", "98", "108" },
-    .tag_lens = { 2, 2, 2, 2, 2, 2, 3 },
-    .values = { "D", "BROKER", "CLIENT", "1", "20250210-18:52:11.000", "0", "30" },
-    .value_lens = { 1, 6, 6, 1, 21, 1, 2 },
-    .n_fields = 7
-  };
-  constexpr uint16_t expected_len = sizeof(buffer) - 1;
-
-  ff_message_t message;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, NULL);
-
-  mu_assert("error: deserialize no error param: wrong length", len == expected_len);
-  mu_assert("error: deserialize no error param: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
 }
@@ -312,14 +334,11 @@ static char *test_deserialize_no_beginstr(void)
     "10=87\x01";
   constexpr ff_message_t expected_message = {0};
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_INVALID_MESSAGE;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize no begin string: wrong length", len == expected_len);
-  mu_assert("error: deserialize no begin string: wrong error", error == expected_error);
   mu_assert("error: deserialize no begin string: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
@@ -339,14 +358,11 @@ static char *test_deserialize_no_body_length(void)
     "10=148";
   constexpr ff_message_t expected_message = {0};
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_INVALID_MESSAGE;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize no body length: wrong length", len == expected_len);
-  mu_assert("error: deserialize no body length: wrong error", error == expected_error);
   mu_assert("error: deserialize no body length: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
@@ -367,14 +383,11 @@ static char *test_deserialize_wrong_beginstr(void)
     "10=118\x01";
   constexpr ff_message_t expected_message = {0};
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_INVALID_MESSAGE;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong beginstr: wrong length", len == expected_len);
-  mu_assert("error: deserialize wrong beginstr: wrong error", error == expected_error);
   mu_assert("error: deserialize wrong beginstr: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
@@ -395,14 +408,11 @@ static char *test_deserialize_wrong_body_length1(void)
     "10=121\x01";
   constexpr ff_message_t expected_message = {0};
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong bodylength 1: wrong length", len == expected_len);
-  mu_assert("error: deserialize wrong bodylength 1: wrong error", error == expected_error);
   mu_assert("error: deserialize wrong bodylength 1: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
@@ -423,14 +433,11 @@ static char *test_deserialize_wrong_body_length2(void)
     "10=119\x01";
   constexpr ff_message_t expected_message = {0};
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_BODY_LENGTH_MISMATCH;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong bodylength 2: wrong length", len == expected_len);
-  mu_assert("error: deserialize wrong bodylength 2: wrong error", error == expected_error);
   mu_assert("error: deserialize wrong bodylength 2: wrong message", compare_messages(&message, &expected_message));
 
   return 0;
@@ -451,15 +458,51 @@ static char *test_deserialize_checksum_mismatch(void)
     "10=255\x01";
   constexpr ff_message_t expected_message = {0};
   constexpr uint16_t expected_len = 0;
-  constexpr ff_error_t expected_error = FF_CHECKSUM_MISMATCH;
 
   ff_message_t message;
-  ff_error_t error = FF_OK;
-  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message, &error);
+  uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize checksum mismatch: wrong length", len == expected_len);
-  mu_assert("error: deserialize checksum mismatch: wrong error", error == expected_error);
   mu_assert("error: deserialize checksum mismatch: wrong message", compare_messages(&message, &expected_message));
+
+  return 0;
+}
+
+static char *test_is_complete_positive(void)
+{
+  char buffer[] = 
+    "8=FIX.4.4\x01"
+    "9=67\x01"
+    "35=D\x01"
+    "49=BROKER\x01"
+    "56=CLIENT\x01"
+    "34=1\x01"
+    "52=20250210-18:52:11.000\x01"
+    "98=0\x01"
+    "108=30\x01"
+    "10=120\x01";
+  constexpr uint16_t len = sizeof(buffer) - 1;
+
+  mu_assert("error: is complete positive: wrong result", ff_is_complete(buffer, len));
+
+  return 0;
+}
+
+static char *test_is_complete_negative(void)
+{
+  char buffer[] = 
+    "8=FIX.4.4\x01"
+    "9=67\x01"
+    "35=D\x01"
+    "49=BROKER\x01"
+    "56=CLIENT\x01"
+    "34=1\x01"
+    "52=20250210-18:52:11.000\x01"
+    "98=0\x01"
+    "108=30\x01";
+  constexpr uint16_t len = sizeof(buffer) - 1;
+
+  mu_assert("error: is complete negative: wrong result", !ff_is_complete(buffer, len));
 
   return 0;
 }

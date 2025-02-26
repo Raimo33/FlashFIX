@@ -11,7 +11,7 @@ These functions **only verify the structural integrity** of messages in terms of
 ## ff_deserialize
 
 ```c
-uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message, ff_error_t *restrict error);
+uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message);
 ```
 
 ### Description
@@ -21,11 +21,10 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
   - `buffer` - the buffer which contains the full serialized message
   - `buffer_size` - the size of the buffer in bytes
   - `message` - the message struct where to store the deserialized fields
-  - `error` - an optional pointer to retrieve error information
 
 ### Returns
   - length of the deserialized message in bytes
-  - `0` in case of error
+  - `0` in case of error (see below)
 
 ### Undefined Behavior
   - `buffer` is `NULL`
@@ -37,6 +36,28 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
   - `buffer` contains non printable characters
 
 ### Errors
-  - `FF_INVALID_MESSAGE` - the message does not contain mandatory tags
-  - `FF_BODY_LENGTH_MISMATCH` - the body length tag does not match the actual body length
-  - `FF_CHECKSUM_MISMATCH` - the checksum tag does not match the actual checksum
+  - wrong beginstring
+  - no body length
+  - checksum mismatch
+  - body length mismatch
+
+## ff_is_complete
+
+```c
+bool ff_is_complete(const char *buffer, const uint16_t len);
+```
+
+### Description
+checks if a buffer contains a full fix message (i.e. it ends with a checksum followed by a `'\x01'` delimiter)
+
+### Parameters
+  - `buffer` - the buffer which contains the full serialized message
+  - `len` - the length of the filled part of the buffer in bytes
+
+### Returns
+  - `true` if the buffer contains a full message
+  - `false` otherwise
+
+### Undefined Behavior
+  - `buffer` is `NULL`
+  - `len` is `0`

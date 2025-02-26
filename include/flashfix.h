@@ -16,8 +16,8 @@ last edited: 2025-02-24 16:35:15
 #   define FIX_VERSION "FIX.4.4"
 # endif
 
-# include "flashfix/serializer.h"
-# include "flashfix/deserializer.h"
+# include "serializer.h"
+# include "deserializer.h"
 
 //TODO explore <stdbit.h> for bit manipulation
 
