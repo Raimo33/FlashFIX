@@ -124,7 +124,7 @@
 </code></pre>
 <p>These functions <strong>only verify the structural integrity</strong> of messages in terms of format, checksum, and body length. They do not validate the correctness of the messages (e.g. duplicate tags, invalid values, etc.).</p>
 <h2 id="ff_deserialize">ff_deserialize</h2>
-<pre><code class="language-c">uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, ff_message_t *restrict message);
+<pre><code class="language-c">uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message);
 </code></pre>
 <h3 id="description">Description</h3>
 <p>deserializes a fix message by tokenizing the buffer <strong>in place</strong>: replacing <code>'='</code> and <code>'\x01'</code> delimiters with <code>'\0'</code> and store pointers to the beginning of each field in the message struct</p>

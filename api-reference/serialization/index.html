@@ -122,7 +122,7 @@
 </code></pre>
 <p>These functions <strong>don't check the validity of messages</strong>, they assume that the message struct is correctly filled with the right values.</p>
 <h2 id="ff_serialize">ff_serialize</h2>
-<pre><code class="language-c">uint16_t ff_serialize(char *restrict buffer, const ff_message_t *restrict message);
+<pre><code class="language-c">uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict message);
 </code></pre>
 <h3 id="description">Description</h3>
 <p>serializes a fix message into a buffer by concatenating the fields with '=' and '\x01' delimiters and adding the mandatory beginstring, bodylength, and checksum fields.</p>
@@ -150,7 +150,7 @@
 <li><code>message</code> with <code>n_fields == 0</code></li>
 </ul>
 <h2 id="ff_serialize_raw">ff_serialize_raw</h2>
-<pre><code class="language-c">uint16_t ff_serialize_raw(char *restrict buffer, const ff_message_t *restrict message);
+<pre><code class="language-c">uint16_t ff_serialize_raw(char *restrict buffer, const fix_message_t *restrict message);
 </code></pre>
 <h3 id="description_1">Description</h3>
 <p>serializes a fix message into a buffer by concatenating the fields with '=' and '\x01' delimiters.</p>
