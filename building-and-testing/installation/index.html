@@ -99,8 +99,7 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="installation-guide">Installation Guide</h1>
-<p>To install FlashFIX you must compile it from source, as that will guarantee the best performance.
-You can customize the maximum number of FIX fields per message by specifying the FIX_MAX_FIELDS variable at compile time, the default value is 256.</p>
+<p>To install FlashFIX you must compile it from source, as that will guarantee the best performance.</p>
 <h2 id="requirements">Requirements</h2>
 <ul>
 <li>CMake 3.10 or later</li>
@@ -110,14 +109,13 @@ You can customize the maximum number of FIX fields per message by specifying the
 <h2 id="building">Building</h2>
 <ul>
 <li>Clone the repository: <code>git clone https://github.com/Raimo33/FlashFIX.git</code> or download the source code from the <a href="https://github.com/Raimo33/FlashFIX/releases">release page</a></li>
-<li>Generate the build files: <code>cmake .</code> (add <code>-DFIX_MAX_FIELDS=512</code> to change the maximum number of fields)</li>
-<li>Build the library: <code>cmake --build .</code></li>
-<li>Install the library: <code>cmake --install .</code> (optional)</li>
+<li>Generate the build files: <code>cmake .</code></li>
+<li>Build the library: <code>cmake --build . --parallel</code></li>
+<li>Optionally install the library: <code>cmake --install . --parallel</code></li>
 </ul>
 <h2 id="testing">Testing</h2>
-<p>For testing, the library must to be compiled with -DFIX_MAX_FIELDS=64.</p>
 <ul>
-<li>Compile the tests: <code>cmake --build . --target test</code></li>
+<li>Compile the tests: <code>cmake --build . --parallel --target test</code></li>
 <li>Run the test executable: <code>./test</code></li>
 </ul>
 <p>in case of failure, please open an issue on <a href="https://github.com/Raimo33/FlashFIX/labels/test-failed">GitHub</a> if there isn't one already.</p>

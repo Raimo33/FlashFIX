@@ -157,7 +157,7 @@
 <h3 id="parameters_1">Parameters</h3>
 <ul>
 <li><code>buffer</code> - the buffer where to store the serialized message</li>
-<li><code>message</code> - the message struct containing the fields to serialize</li>
+<li><code>message</code> - the message struct containing the fields to serialize.</li>
 </ul>
 <h3 id="returns_1">Returns</h3>
 <ul>
@@ -168,6 +168,8 @@
 <li><code>buffer</code> is <code>NULL</code></li>
 <li><code>message</code> is <code>NULL</code></li>
 <li><code>message</code> doesn't fit in the buffer</li>
+<li><code>message-&gt;fields</code> is <code>NULL</code></li>
+<li><code>message-&gt;fields</code> is not allocated</li>
 <li>value_len and <code>tag_len</code> are different from the actual length of the value and tag</li>
 <li><code>n_fields</code> is different from the actual number of fields in the message</li>
 <li>non printable characters</li>

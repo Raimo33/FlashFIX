@@ -63,6 +63,12 @@
               </ul>
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">Examples</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#serialization">Serialization</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#deserialization">Deserialization</a>
+    </li>
+    </ul>
                 </li>
               </ul>
       </div>
@@ -89,7 +95,59 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <p><strong>todo</strong></p>
+                <h1 id="examples">Examples</h1>
+<h2 id="serialization">Serialization</h2>
+<pre><code class="language-c">#include &lt;flashfix/serialization.h&gt;
+
+#define STR_LEN(s) (sizeof(s) - 1)
+
+/*...*/
+
+fix_field_t data_fields[5] = {
+  {.tag = &quot;35&quot;,  .value = &quot;A&quot;,           .tag_len = 2, .value_len = 1},
+  {.tag = &quot;49&quot;,  .value = &quot;CLIENT123&quot;,   .tag_len = 2, .value_len = 9},
+  {.tag = &quot;56&quot;,  .value = &quot;SPOT&quot;,        .tag_len = 2, .value_len = 4},
+  {.tag = &quot;34&quot;,  .value = &quot;1&quot;,           .tag_len = 2, .value_len = 1},
+  {.tag = &quot;52&quot;,  .value = timestamp_str, .tag_len = 2, .value_len = 21},
+};
+
+char raw_serialized_data[1024];
+const uint16_t data_len = ff_serialize_raw(raw_serialized_data, (const fix_message_t *){fields, 5});
+
+fix_field_t logon_fields[6] = {
+  {.tag = &quot;35&quot;,  .value = &quot;A&quot;,           .tag_len = 2, .value_len = 1},
+  {.tag = &quot;49&quot;,  .value = &quot;CLIENT123&quot;,   .tag_len = 2, .value_len = 9},
+  {.tag = &quot;56&quot;,  .value = &quot;SPOT&quot;,        .tag_len = 2, .value_len = 4},
+  {.tag = &quot;34&quot;,  .value = &quot;1&quot;,           .tag_len = 2, .value_len = 1},
+  {.tag = &quot;52&quot;,  .value = timestamp_str, .tag_len = 2, .value_len = 21},
+  {.tag = &quot;98&quot;,  .value = &quot;0&quot;,           .tag_len = 2, .value_len = 1},
+};
+
+char serialized_logon[1024];
+const uint16_t logon_len = ff_serialize(serialized_logon, (const fix_message_t *){logon_fields, 6});
+
+write(sockfd, raw_serialized_data, data_len);
+
+/*...*/
+</code></pre>
+<h2 id="deserialization">Deserialization</h2>
+<pre><code class="language-c">#include &lt;flashfix/deserialization.h&gt;
+
+/*...*/
+
+char read_buffer[4096];
+uint16_t bytes_read = 0;
+
+do {
+  bytes_read += read(sockfd, read_buffer, 1024);
+} while (ff_is_complete(read_buffer, bytes_read) == false);
+
+fix_field_t fields[16];
+fix_message_t message = {fields, 16};
+ff_deserialize(&amp;message, read_buffer, bytes_read);
+
+/*...*/
+</code></pre>
               
             </div>
           </div><footer>
