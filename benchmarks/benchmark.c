@@ -5,11 +5,10 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-25 14:58:53                                                
+last edited: 2025-02-27 18:05:40                                                
 
 ================================================================================*/
 
-#define _GNU_SOURCE
 #include <flashfix.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,98 +18,105 @@ last edited: 2025-02-25 14:58:53
 #include <fcntl.h>
 #include <unistd.h>
 
+#define MAX_FIELDS 256
 #define N_ITERATIONS 1'000'000
 #define MEAN_TAG_LEN 2
 #define MEAN_VALUE_LEN 6
 #define MAX_TAG_LEN 5
 #define MAX_VALUE_LEN 1024
 #define ALIGNMENT 64
-#define BUFFER_SIZE (MEAN_TAG_LEN + MEAN_VALUE_LEN + 2) * (FIX_MAX_FIELDS + 3)
+#define BUFFER_SIZE (MEAN_TAG_LEN + MEAN_VALUE_LEN + 2) * (MAX_FIELDS + 3)
 #define static_assert _Static_assert
 #define STR_LEN(str) sizeof(str) - 1
 #define ALIGNED(n) __attribute__((aligned(n)))
 
-static void init_random_tags(char *tags[FIX_MAX_FIELDS]);
-static void init_random_values(char *values[FIX_MAX_FIELDS]);
-static void fill_message_structs(fix_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
-static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
-static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
-static void serialize(fix_message_t messages[FIX_MAX_FIELDS]);
-static void serialize_raw(fix_message_t messages[FIX_MAX_FIELDS]);
-static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE]);
-static bool fits_buffer(char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS]);
+static void init_random_tags(char **tags);
+static void init_random_values(char **values);
+static void fill_message_structs(fix_message_t *messages, char **tags, char **values);
+static void fill_message_buffers(char **buffers, char **tags, char **values);
+static void fill_message_lengths(uint16_t *message_lengths, char **message_buffers);
+static void serialize(fix_message_t *messages);
+static void serialize_raw(fix_message_t *messages);
+static void deserialize(char **buffers);
+static bool fits_buffer(char **tags, char **values);
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len);
 static double gaussian_rand(const double mean, const double stddev);
 static inline uint16_t clamp(const uint16_t n, const uint16_t min, const uint16_t max);
 static uint8_t compute_checksum(const char *buffer, const uint16_t len);
 static uint32_t open_p(const char *pathname, const int32_t flags, const mode_t mode);
 static void *aligned_calloc_p(const size_t n, const size_t size);
-static void free_strings(char *strings[FIX_MAX_FIELDS], const uint16_t n);
+static void free_strings(char **strings, const uint16_t n);
+static void free_message_structs(fix_message_t *messages);
 
 int32_t main(void)
 {
   static_assert(BUFFER_SIZE < UINT16_MAX, "BUFFER_SIZE must be less than UINT16_MAX");
 
-  char *tags[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
-  char *values[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
+  char **tags = aligned_calloc_p(MAX_FIELDS, sizeof(char *));
+  char **values = aligned_calloc_p(MAX_FIELDS, sizeof(char *));
 
   do {
-    bzero(tags, FIX_MAX_FIELDS * sizeof(char *));
-    bzero(values, FIX_MAX_FIELDS * sizeof(char *));
+    bzero(tags, MAX_FIELDS * sizeof(char *));
+    bzero(values, MAX_FIELDS * sizeof(char *));
 
     init_random_tags(tags);
     init_random_values(values);
   } while (!fits_buffer(tags, values));
   
   {
-    fix_message_t message_structs[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
+    fix_message_t *message_structs = aligned_calloc_p(MAX_FIELDS, sizeof(fix_message_t));
     
     fill_message_structs(message_structs, tags, values);
     
     serialize(message_structs);
     serialize_raw(message_structs);
+    
+    free_message_structs(message_structs);
+    free(message_structs);
   }
   
   {
-    char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
-    uint16_t message_lengths[FIX_MAX_FIELDS] ALIGNED(ALIGNMENT) = {0};
-
+    char **message_buffers = aligned_calloc_p(MAX_FIELDS, sizeof(char *));
+    uint16_t *message_lengths = aligned_calloc_p(MAX_FIELDS, sizeof(uint16_t));
+    
     fill_message_buffers(message_buffers, tags, values);
     fill_message_lengths(message_lengths, message_buffers);
-
+    
     deserialize(message_buffers);
-    //TODO deserialize_read
-    //TODO read_and_deserialize
+    free_strings(message_buffers, MAX_FIELDS);
+    free(message_buffers);
+    free(message_lengths);
   }
   
-  free_strings(tags, FIX_MAX_FIELDS);
-  free_strings(values, FIX_MAX_FIELDS);
+  free_strings(tags, MAX_FIELDS);
+  free_strings(values, MAX_FIELDS);
 }
 
 
-static void init_random_tags(char *tags[FIX_MAX_FIELDS])
+static void init_random_tags(char **tags)
 {
   constexpr char charset[] = "0123456789";
   constexpr uint8_t charset_len = sizeof(charset) - 1;
 
-  for (uint32_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint32_t i = 0; i < MAX_FIELDS; i++)
     tags[i] = generate_random_string(charset, charset_len, MEAN_TAG_LEN, MAX_TAG_LEN);
 }
 
-static void init_random_values(char *values[FIX_MAX_FIELDS])
+static void init_random_values(char **values)
 {
   constexpr char charset[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   constexpr uint8_t charset_len = sizeof(charset) - 1;
   
-  for (uint32_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint32_t i = 0; i < MAX_FIELDS; i++)
     values[i] = generate_random_string(charset, charset_len, MEAN_VALUE_LEN, MAX_VALUE_LEN);
 }
 
-static void fill_message_structs(fix_message_t *messages, char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS])
+static void fill_message_structs(fix_message_t *messages, char **tags, char **values)
 {
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     messages[i].n_fields = i + 1;
+    messages[i].fields = aligned_calloc_p(MAX_FIELDS, sizeof(fix_field_t));
 
     for (uint16_t j = 0; j <= i; j++)
     {
@@ -124,13 +130,12 @@ static void fill_message_structs(fix_message_t *messages, char *tags[FIX_MAX_FIE
   }
 }
 
-static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS])
+static void fill_message_buffers(char **buffers, char **tags, char **values)
 {
-  char temp_body[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
-
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
-    char *buffer = buffers[i];
+    char temp_body[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
+    char *buffer = buffers[i] = aligned_calloc_p(BUFFER_SIZE, sizeof(char));
     int total = 0;
 
     total += sprintf(buffer + total, "8=FIX.4.4\x01");
@@ -150,13 +155,13 @@ static void fill_message_buffers(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE], char
   }
 }
 
-static void fill_message_lengths(uint16_t message_lengths[FIX_MAX_FIELDS], char message_buffers[FIX_MAX_FIELDS][BUFFER_SIZE])
+static void fill_message_lengths(uint16_t *message_lengths, char **message_buffers)
 {
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
     message_lengths[i] = strlen(message_buffers[i]);
 }
 
-static void serialize(fix_message_t messages[FIX_MAX_FIELDS])
+static void serialize(fix_message_t *messages)
 {
   const int32_t fd = open_p("benchmark_serialize.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
   
@@ -166,7 +171,7 @@ static void serialize(fix_message_t messages[FIX_MAX_FIELDS])
   char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
 
   dprintf(fd, "# of fields, # of cpu cycles\n");
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
@@ -180,7 +185,7 @@ static void serialize(fix_message_t messages[FIX_MAX_FIELDS])
   close(fd);
 }
 
-static void serialize_raw(fix_message_t messages[FIX_MAX_FIELDS])
+static void serialize_raw(fix_message_t *messages)
 {
   const int32_t fd = open_p("benchmark_serialize_raw.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
   
@@ -190,7 +195,7 @@ static void serialize_raw(fix_message_t messages[FIX_MAX_FIELDS])
   char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
 
   dprintf(fd, "# of fields, # of cpu cycles\n");
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
@@ -204,7 +209,7 @@ static void serialize_raw(fix_message_t messages[FIX_MAX_FIELDS])
   close(fd);
 }
 
-static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE])
+static void deserialize(char **buffers)
 {
   const int32_t fd = open_p("benchmark_deserialize.csv", O_TRUNC | O_CREAT | O_WRONLY, 0644);
   
@@ -212,9 +217,11 @@ static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE])
   uint32_t aux;
 
   fix_message_t message ALIGNED(ALIGNMENT) = {0};
+  message.fields = aligned_calloc_p(MAX_FIELDS, sizeof(fix_field_t));
+  message.n_fields = MAX_FIELDS;
 
   dprintf(fd, "# of fields, # of cpu cycles\n");
-  for (uint16_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
@@ -225,14 +232,15 @@ static void deserialize(char buffers[FIX_MAX_FIELDS][BUFFER_SIZE])
     dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
   }
 
+  free(message.fields);
   close(fd);
 }
 
-static bool fits_buffer(char *tags[FIX_MAX_FIELDS], char *values[FIX_MAX_FIELDS])
+static bool fits_buffer(char **tags, char **values)
 {
   uint16_t total_len = STR_LEN("8=FIX.4.4|9=000000000|10=000|");
 
-  for (uint32_t i = 0; i < FIX_MAX_FIELDS; i++)
+  for (uint32_t i = 0; i < MAX_FIELDS; i++)
     total_len += strlen(tags[i]) + strlen(values[i]) + 2;
 
   return total_len < BUFFER_SIZE;
@@ -291,11 +299,18 @@ static void *aligned_calloc_p(const size_t n, const size_t size)
     perror("aligned_alloc");
     exit(EXIT_FAILURE);
   }
+  bzero(ptr, n * size);
   return ptr;
 }
 
-static void free_strings(char *strings[FIX_MAX_FIELDS], const uint16_t n)
+static void free_strings(char **strings, const uint16_t n)
 {
   for (uint16_t i = 0; i < n; i++)
     free(strings[i]);
+}
+
+static void free_message_structs(fix_message_t *messages)
+{
+  for (uint16_t i = 0; i < MAX_FIELDS; i++)
+    free(messages[i].fields);
 }

@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-25 14:58:53                                                
+last edited: 2025-02-27 18:05:40                                                
 
 ================================================================================*/
 
@@ -97,19 +97,17 @@ static char *all_tests(void)
 
 static char *test_serialize_normal_message(void)
 {
-  const fix_message_t message = {
-    .fields = {
-      { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" },
-      { .tag_len = 2, .value_len = 1, .tag = "35", .value = "D" },
-      { .tag_len = 2, .value_len = 6, .tag = "49", .value = "BROKER" },
-      { .tag_len = 2, .value_len = 6, .tag = "56", .value = "CLIENT" },
-      { .tag_len = 2, .value_len = 1, .tag = "34", .value = "1" },
-      { .tag_len = 2, .value_len = 21, .tag = "52", .value = "20250210-18:52:11.000" },
-      { .tag_len = 2, .value_len = 1, .tag = "98", .value = "0" },
-      { .tag_len = 3, .value_len = 2, .tag = "108", .value = "30" }
-    },
-    .n_fields = 8
+  fix_field_t fields[8] = {
+    { .tag = "6", .value = "123", .tag_len = 1, .value_len = 3 },
+    { .tag = "35", .value = "D", .tag_len = 2, .value_len = 1 },
+    { .tag = "49", .value = "BROKER", .tag_len = 2, .value_len = 6 },
+    { .tag = "56", .value = "CLIENT", .tag_len = 2, .value_len = 6 },
+    { .tag = "34", .value = "1", .tag_len = 2, .value_len = 1 },
+    { .tag = "52", .value = "20250210-18:52:11.000", .tag_len = 2, .value_len = 21 },
+    { .tag = "98", .value = "0", .tag_len = 2, .value_len = 1 },
+    { .tag = "108", .value = "30", .tag_len = 3, .value_len = 2 }
   };
+  const fix_message_t message = { fields, 8 };
   constexpr char expected_buffer[] =
     "8=FIX.4.4\x01"
     "9=73\x01"
@@ -135,12 +133,10 @@ static char *test_serialize_normal_message(void)
 
 static char *test_serialize_one_field_message(void)
 {
-  const fix_message_t message = {
-    .fields = {
-      { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" }
-    },
-    .n_fields = 1
+  fix_field_t fields[1] = {
+    { .tag = "6", .value = "123", .tag_len = 1, .value_len = 3 }
   };
+  const fix_message_t message = { fields, 1 };
   constexpr char expected_buffer[] =
     "8=FIX.4.4\x01"
     "9=6\x01"
@@ -159,19 +155,17 @@ static char *test_serialize_one_field_message(void)
 
 static char *test_serialize_raw_normal_message(void)
 {
-  const fix_message_t message = {
-    .fields = {
-      { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" },
-      { .tag_len = 2, .value_len = 1, .tag = "35", .value = "D" },
-      { .tag_len = 2, .value_len = 6, .tag = "49", .value = "BROKER" },
-      { .tag_len = 2, .value_len = 6, .tag = "56", .value = "CLIENT" },
-      { .tag_len = 2, .value_len = 1, .tag = "34", .value = "1" },
-      { .tag_len = 2, .value_len = 21, .tag = "52", .value = "20250210-18:52:11.000" },
-      { .tag_len = 2, .value_len = 1, .tag = "98", .value = "0" },
-      { .tag_len = 3, .value_len = 2, .tag = "108", .value = "30" }
-    },
-    .n_fields = 8
+  fix_field_t fields[8] = {
+    { .tag = "6", .value = "123", .tag_len = 1, .value_len = 3 },
+    { .tag = "35", .value = "D", .tag_len = 2, .value_len = 1 },
+    { .tag = "49", .value = "BROKER", .tag_len = 2, .value_len = 6 },
+    { .tag = "56", .value = "CLIENT", .tag_len = 2, .value_len = 6 },
+    { .tag = "34", .value = "1", .tag_len = 2, .value_len = 1 },
+    { .tag = "52", .value = "20250210-18:52:11.000", .tag_len = 2, .value_len = 21 },
+    { .tag = "98", .value = "0", .tag_len = 2, .value_len = 1 },
+    { .tag = "108", .value = "30", .tag_len = 3, .value_len = 2 }
   };
+  const fix_message_t message = { fields, 8 };
   constexpr char expected_buffer[] =
     "6=123\x01"
     "35=D\x01"
@@ -194,12 +188,10 @@ static char *test_serialize_raw_normal_message(void)
 
 static char *test_serialize_raw_one_field_message(void)
 {
-  const fix_message_t message = {
-    .fields = {
-      { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" }
-    },
-    .n_fields = 1
+  fix_field_t fields[1] = {
+    { .tag = "6", .value = "123", .tag_len = 1, .value_len = 3 }
   };
+  const fix_message_t message = { fields, 1 };
   constexpr char expected_buffer[] =
     "6=123\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
@@ -227,22 +219,21 @@ static char *test_deserialize_normal_message(void)
     "98=0\x01"
     "108=30\x01"
     "10=127\x01";
-  static const fix_message_t expected_message = {
-    .fields = {
-      { .tag_len = 1, .value_len = 3, .tag = "6", .value = "123" },
-      { .tag_len = 2, .value_len = 1, .tag = "35", .value = "D" },
-      { .tag_len = 2, .value_len = 6, .tag = "49", .value = "BROKER" },
-      { .tag_len = 2, .value_len = 6, .tag = "56", .value = "CLIENT" },
-      { .tag_len = 2, .value_len = 1, .tag = "34", .value = "1" },
-      { .tag_len = 2, .value_len = 21, .tag = "52", .value = "20250210-18:52:11.000" },
-      { .tag_len = 2, .value_len = 1, .tag = "98", .value = "0" },
-      { .tag_len = 3, .value_len = 2, .tag = "108", .value = "30" }
-    },
-    .n_fields = 8
+  fix_field_t expected_fields[8] = {
+    { .tag = "6", .value = "123", .tag_len = 1, .value_len = 3 },
+    { .tag = "35", .value = "D", .tag_len = 2, .value_len = 1 },
+    { .tag = "49", .value = "BROKER", .tag_len = 2, .value_len = 6 },
+    { .tag = "56", .value = "CLIENT", .tag_len = 2, .value_len = 6 },
+    { .tag = "34", .value = "1", .tag_len = 2, .value_len = 1 },
+    { .tag = "52", .value = "20250210-18:52:11.000", .tag_len = 2, .value_len = 21 },
+    { .tag = "98", .value = "0", .tag_len = 2, .value_len = 1 },
+    { .tag = "108", .value = "30", .tag_len = 3, .value_len = 2 }
   };
+  const fix_message_t expected_message = { expected_fields, 8 };
   constexpr uint16_t expected_len = sizeof(buffer) - 1;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize normal message: wrong length", len == expected_len);
@@ -253,8 +244,6 @@ static char *test_deserialize_normal_message(void)
 
 static char *test_deserialize_too_many_fields(void)
 {
-  static_assert(FIX_MAX_FIELDS == 64, "FIX_MAX_FIELDS must be 64 for this test to work");
-
   char buffer[] = 
     "8=FIX.4.4\x01"
     "9=697\x01"
@@ -326,7 +315,8 @@ static char *test_deserialize_too_many_fields(void)
     "10=014\x01";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[64];
+  fix_message_t message = { fields, 64 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize too many fields: wrong length", len == expected_len);
@@ -348,7 +338,8 @@ static char *test_deserialize_no_beginstr(void)
     "10=87\x01";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize no begin string: wrong length", len == expected_len);
@@ -370,7 +361,8 @@ static char *test_deserialize_no_body_length(void)
     "10=148";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize no body length: wrong length", len == expected_len);
@@ -393,7 +385,8 @@ static char *test_deserialize_wrong_beginstr(void)
     "10=118\x01";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong beginstr: wrong length", len == expected_len);
@@ -416,7 +409,8 @@ static char *test_deserialize_wrong_body_length1(void)
     "10=121\x01";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong bodylength 1: wrong length", len == expected_len);
@@ -439,7 +433,8 @@ static char *test_deserialize_wrong_body_length2(void)
     "10=119\x01";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize wrong bodylength 2: wrong length", len == expected_len);
@@ -462,7 +457,8 @@ static char *test_deserialize_checksum_mismatch(void)
     "10=255\x01";
   constexpr uint16_t expected_len = 0;
 
-  fix_message_t message;
+  fix_field_t fields[16];
+  fix_message_t message = { fields, 16 };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
   mu_assert("error: deserialize checksum mismatch: wrong length", len == expected_len);

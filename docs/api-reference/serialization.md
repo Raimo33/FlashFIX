@@ -48,7 +48,7 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
 
 ### Parameters
   - `buffer` - the buffer where to store the serialized message
-  - `message` - the message struct containing the fields to serialize
+  - `message` - the message struct containing the fields to serialize.
 
 ### Returns
   - length of the serialized message in bytes
@@ -57,6 +57,8 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
   - `buffer` is `NULL`
   - `message` is `NULL`
   - `message` doesn't fit in the buffer
+  - `message->fields` is `NULL`
+  - `message->fields` is not allocated
   - value_len and `tag_len` are different from the actual length of the value and tag
   - `n_fields` is different from the actual number of fields in the message
   - non printable characters

@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-24 17:33:11                                                
+last edited: 2025-02-27 18:05:40                                                
 
 ================================================================================*/
 
@@ -233,21 +233,22 @@ static inline bool check_zero_equal_soh(const char *buffer)
 static bool tokenize(const char *buffer, const char *const end, fix_message_t *restrict message)
 {
   fix_field_t *fields = message->fields;
+  const uint16_t max_fields = message->n_fields;
 
   message->n_fields = 0;
   while (LIKELY(buffer < end))
   {
-    char *delim = memchr(buffer, '=', end - buffer);
+    char *delim = rawmemchr(buffer, '=');
     const uint16_t tag_len = delim - buffer;
     *delim++ = '\0';
 
-    char *soh = memchr(delim, '\x01', end - delim);
+    char *soh = rawmemchr(delim, '\x01');
     const uint16_t value_len = soh - delim;
     *soh++ = '\0';
 
-    if (UNLIKELY(message->n_fields++ == FIX_MAX_FIELDS))
+    if (UNLIKELY(message->n_fields++ >= max_fields))
       return false;
-
+    
     *fields++ = (fix_field_t){
       .tag = buffer,
       .value = delim,
@@ -257,8 +258,7 @@ static bool tokenize(const char *buffer, const char *const end, fix_message_t *r
 
     buffer = soh;
   }
-
-  bzero(fields, sizeof(fix_field_t) * (FIX_MAX_FIELDS - message->n_fields));
+  bzero(fields, sizeof(fix_field_t) * (max_fields - message->n_fields));
 
   return true;
 }

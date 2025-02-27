@@ -22,4 +22,4 @@ To run your own benchmarks you can follow the steps below:
   - Compile the library as described in the [installation guide](installation.md)
   - Compile the benchmark target: ```cmake --build . --target benchmark```
   - Run the benchmark executable: ```./benchmark```
-  - Generate a plot with the results: ```python3 ./bencmarks/plot.py *.csv```
+  - Generate a plot with the results: ```python3 ./benchmarks/plot.py *.csv```

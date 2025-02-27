@@ -15,12 +15,12 @@ uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size,
 ```
 
 ### Description
-deserializes a fix message by tokenizing the buffer **in place**: replacing `'='` and `'\x01'` delimiters with `'\0'` and store pointers to the beginning of each field in the message struct
+deserializes a fix message by tokenizing the buffer **in place**: replacing `'='` and `'\x01'` delimiters with `'\0'` and store pointers to the beginning of each field and value in the message struct.
 
 ### Parameters
   - `buffer` - the buffer which contains the full serialized message
   - `buffer_size` - the size of the buffer in bytes
-  - `message` - the message struct where to store the deserialized fields
+  - `message` - the message struct where to store the deserialized fields, it should have the `fields` array already allocated and the `n_fields` field set to the size of the `fields` array (i.e. the maximum number of fields that can be stored)
 
 ### Returns
   - length of the deserialized message in bytes
@@ -29,9 +29,11 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
 ### Undefined Behavior
   - `buffer` is `NULL`
   - `message` is `NULL`
-  - `buffer` does not contain a full message
-  - `message->n_fields` is greater than `FIX_MAX_FIELDS`
+  - `message->fields` is `NULL`
+  - `message->fields` is not allocated
+  - `message->n_fields` is different from the actual size of the `fields` array
   - `buffer_size` is different from the actual size of the buffer
+  - `buffer` does not contain a full message
   - `buffer` does not contain a full message
   - `buffer` contains non printable characters
 
@@ -40,6 +42,7 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
   - no body length
   - checksum mismatch
   - body length mismatch
+  - too many fields
 
 ## ff_is_complete
 
