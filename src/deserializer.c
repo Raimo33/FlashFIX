@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-27 18:05:40                                                
+last edited: 2025-02-28 19:14:47                                                
 
 ================================================================================*/
 
@@ -15,7 +15,7 @@ last edited: 2025-02-27 18:05:40
 
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size);
 static inline bool check_zero_equal_soh(const char *buffer);
-static bool tokenize(const char *buffer, const char *const end, fix_message_t *restrict message);
+static bool tokenize(char *buffer, const char *const end, fix_message_t *const restrict message);
 static uint32_t atoui(const char *str, const char **endptr);
 static inline uint32_t mul10(uint32_t n);
 
@@ -65,7 +65,7 @@ CONSTRUCTOR void ff_deserializer_init(void)
 #endif
 }
 
-uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, fix_message_t *restrict message)
+uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, fix_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
   
@@ -79,7 +79,7 @@ uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, fix_mess
 
   buffer += STR_LEN("9=");
 
-  const uint16_t body_length = (uint16_t)atoui(buffer, &buffer);
+  const uint16_t body_length = (uint16_t)atoui(buffer, (const char **)&buffer);
 
   if (UNLIKELY(*buffer++ != '\x01'))
     return 0;
@@ -93,16 +93,16 @@ uint16_t ff_deserialize(const char *buffer, const uint16_t buffer_size, fix_mess
   if (UNLIKELY(memcmp(checksum_start, "10=", 3)))
     return 0;
 
-  buffer = checksum_start + STR_LEN("10=");
+  buffer = (char *)checksum_start + STR_LEN("10=");
 
   const uint8_t expected_checksum = compute_checksum(buffer_start, checksum_start);
-  const uint8_t provided_checksum = (uint8_t)atoui(buffer, &buffer);
+  const uint8_t provided_checksum = (uint8_t)atoui(buffer, (const char **)&buffer);
   if (UNLIKELY(expected_checksum != provided_checksum))
     return 0;
 
   buffer += STR_LEN("\x01");
 
-  if (UNLIKELY(!tokenize(body_start, checksum_start, message)))
+  if (UNLIKELY(!tokenize((char *)body_start, checksum_start, message)))
     return 0;
 
   return buffer - buffer_start;
@@ -230,7 +230,7 @@ static inline bool check_zero_equal_soh(const char *buffer)
   return *(uint16_t *)(buffer) == *(uint16_t *)"0=" && buffer[5] == '\x01';
 }
 
-static bool tokenize(const char *buffer, const char *const end, fix_message_t *restrict message)
+static bool tokenize(char *buffer, const char *const end, fix_message_t *const restrict message)
 {
   fix_field_t *fields = message->fields;
   const uint16_t max_fields = message->n_fields;

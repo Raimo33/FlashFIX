@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 14:56:11                                                 
-last edited: 2025-02-17 19:51:20                                                
+last edited: 2025-02-28 19:14:47                                                
 
 ================================================================================*/
 
@@ -21,7 +21,7 @@ last edited: 2025-02-17 19:51:20
 # define STR_LEN(x) (sizeof(x) - 1)
 
 INTERNAL uint8_t compute_checksum(const char *buffer, const char *end);
-INTERNAL ALWAYS_INLINE inline void *align_forward(const void *ptr)
+INTERNAL ALWAYS_INLINE inline void *align_forward(const void *const ptr)
 {
 #ifdef __AVX512F__
   constexpr uint8_t alignment = 64;
