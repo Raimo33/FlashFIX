@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-28 19:14:47                                                
+last edited: 2025-03-01 10:50:03                                                
 
 ================================================================================*/
 
@@ -270,7 +270,7 @@ static uint32_t atoui(const char *str, const char **endptr)
   while (UNLIKELY(*str == ' '))
     str++;
 
-  while (LIKELY(*str >= '0' && *str <= '9'))
+  while (LIKELY((uint8_t)*str - '0' < 10))
   {
     result = mul10(result) + (*str - '0');
     str++;
