@@ -20,7 +20,10 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
 ### Parameters
   - `buffer` - the buffer which contains the full serialized message
   - `buffer_size` - the size of the buffer in bytes
-  - `message` - the message struct where to store the deserialized fields, it should have the `fields` array already allocated and the `field_count` field set to the size of the `fields` array (i.e. the maximum number of fields that can be stored)
+  - `message` - the message struct where to store the deserialized fields, with the following conditions:
+    - `fields` already allocated with the maximum number of fields that you expect to receive
+    - `field_count` set to the size of the `fields` array (i.e. the maximum number of fields that can be stored)
+    - everything else should be zeroed (`0`' or `NULL`)
 
 ### Returns
   - length of the deserialized message in bytes

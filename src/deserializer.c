@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-01 11:16:11                                                
+last edited: 2025-03-01 18:04:44                                                
 
 ================================================================================*/
 
@@ -259,7 +259,6 @@ static bool tokenize(char *buffer, const char *const end, fix_message_t *const r
     buffer = soh;
   }
   message->field_count = field_count;
-  bzero(fields, sizeof(fix_field_t) * (max_fields - field_count));
 
   return true;
 }

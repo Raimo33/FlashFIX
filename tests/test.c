@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-03-01 11:16:11                                                
+last edited: 2025-03-01 18:04:44                                                
 
 ================================================================================*/
 
@@ -21,7 +21,7 @@ last edited: 2025-03-01 11:16:11
 #define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
 #define static_assert _Static_assert
 
-int tests_run = 0;
+uint32_t tests_run = 0;
 
 static bool compare_messages(const fix_message_t *a, const fix_message_t *b)
 {
