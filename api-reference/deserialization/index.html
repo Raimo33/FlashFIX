@@ -124,7 +124,7 @@
 </code></pre>
 <p>These functions <strong>only verify the structural integrity</strong> of messages in terms of format, checksum, and body length. They do not validate the correctness of the messages (e.g. duplicate tags, invalid values, etc.).</p>
 <h2 id="ff_deserialize">ff_deserialize</h2>
-<pre><code class="language-c">uint16_t ff_deserialize(const char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message);
+<pre><code class="language-c">uint16_t ff_deserialize(char *restrict buffer, const uint16_t buffer_size, fix_message_t *restrict message);
 </code></pre>
 <h3 id="description">Description</h3>
 <p>deserializes a fix message by tokenizing the buffer <strong>in place</strong>: replacing <code>'='</code> and <code>'\x01'</code> delimiters with <code>'\0'</code> and store pointers to the beginning of each field and value in the message struct.</p>
@@ -132,7 +132,12 @@
 <ul>
 <li><code>buffer</code> - the buffer which contains the full serialized message</li>
 <li><code>buffer_size</code> - the size of the buffer in bytes</li>
-<li><code>message</code> - the message struct where to store the deserialized fields, it should have the <code>fields</code> array already allocated and the <code>n_fields</code> field set to the size of the <code>fields</code> array (i.e. the maximum number of fields that can be stored)</li>
+<li><code>message</code> - the message struct where to store the deserialized fields, with the following conditions:<ul>
+<li><code>fields</code> already allocated with the maximum number of fields that you expect to receive</li>
+<li><code>field_count</code> set to the size of the <code>fields</code> array (i.e. the maximum number of fields that can be stored)</li>
+<li>everything else should be zeroed (<code>0</code>' or <code>NULL</code>)</li>
+</ul>
+</li>
 </ul>
 <h3 id="returns">Returns</h3>
 <ul>
@@ -145,7 +150,7 @@
 <li><code>message</code> is <code>NULL</code></li>
 <li><code>message-&gt;fields</code> is <code>NULL</code></li>
 <li><code>message-&gt;fields</code> is not allocated</li>
-<li><code>message-&gt;n_fields</code> is different from the actual size of the <code>fields</code> array</li>
+<li><code>message-&gt;field_count</code> is different from the actual size of the <code>fields</code> array</li>
 <li><code>buffer_size</code> is different from the actual size of the buffer</li>
 <li><code>buffer</code> does not contain a full message</li>
 <li><code>buffer</code> does not contain a full message</li>
