@@ -20,7 +20,7 @@ fix_field_t data_fields[5] = {
 char raw_serialized_data[1024];
 const uint16_t data_len = ff_serialize_raw(raw_serialized_data, (const fix_message_t *){fields, 5});
 
-fix_field_t logofield_count[6] = {
+fix_field_t logon_fields[6] = {
   {.tag = "35",  .value = "A",           .tag_len = 2, .value_len = 1},
   {.tag = "49",  .value = "CLIENT123",   .tag_len = 2, .value_len = 9},
   {.tag = "56",  .value = "SPOT",        .tag_len = 2, .value_len = 4},
@@ -30,7 +30,7 @@ fix_field_t logofield_count[6] = {
 };
 
 char serialized_logon[1024];
-const uint16_t logon_len = ff_serialize(serialized_logon, (const fix_message_t *){logofield_count, 6});
+const uint16_t logon_len = ff_serialize(serialized_logon, (const fix_message_t *){logon_fields, 6});
 
 write(sockfd, raw_serialized_data, data_len);
 
