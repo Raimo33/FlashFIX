@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-01 10:50:03                                                
+last edited: 2025-03-01 11:16:11                                                
 
 ================================================================================*/
 
@@ -233,9 +233,9 @@ static inline bool check_zero_equal_soh(const char *buffer)
 static bool tokenize(char *buffer, const char *const end, fix_message_t *const restrict message)
 {
   fix_field_t *fields = message->fields;
-  const uint16_t max_fields = message->n_fields;
+  const uint16_t max_fields = message->field_count;
 
-  message->n_fields = 0;
+  uint16_t field_count = 0;
   while (LIKELY(buffer < end))
   {
     char *delim = rawmemchr(buffer, '=');
@@ -246,7 +246,7 @@ static bool tokenize(char *buffer, const char *const end, fix_message_t *const r
     const uint16_t value_len = soh - delim;
     *soh++ = '\0';
 
-    if (UNLIKELY(message->n_fields++ >= max_fields))
+    if (UNLIKELY(field_count++ >= max_fields))
       return false;
     
     *fields++ = (fix_field_t){
@@ -258,7 +258,8 @@ static bool tokenize(char *buffer, const char *const end, fix_message_t *const r
 
     buffer = soh;
   }
-  bzero(fields, sizeof(fix_field_t) * (max_fields - message->n_fields));
+  message->field_count = field_count;
+  bzero(fields, sizeof(fix_field_t) * (max_fields - field_count));
 
   return true;
 }
@@ -267,10 +268,10 @@ static uint32_t atoui(const char *str, const char **endptr)
 {
   uint32_t result = 0;
   
-  while (UNLIKELY(*str == ' '))
+  while (UNLIKELY(*str == ' ')) //TODO skip all types of whitespaces
     str++;
 
-  while (LIKELY((uint8_t)*str - '0' < 10))
+  while (LIKELY((uint8_t)(*str - '0') < 10))
   {
     result = mul10(result) + (*str - '0');
     str++;

@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-02-27 18:05:40                                                
+last edited: 2025-03-01 11:16:11                                                
 
 ================================================================================*/
 
@@ -25,7 +25,7 @@ typedef struct
 typedef struct
 {
   fix_field_t *fields;
-  uint16_t n_fields;
+  uint16_t field_count;
 } fix_message_t;
 
 #endif

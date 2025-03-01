@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-02-25 14:58:53                                                
+last edited: 2025-03-01 11:16:11                                                
 
 ================================================================================*/
 
@@ -13,7 +13,7 @@ last edited: 2025-02-25 14:58:53
 #include "serializer.h"
 #include <string.h>
 
-static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t n_fields);
+static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t field_count);
 ALWAYS_INLINE static inline int32_t horizontal_sum128(__m128i vec);
 static uint8_t utoa(uint16_t num, char *buffer);
 ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
@@ -44,7 +44,7 @@ uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict messa
 {
   const char *const buffer_start = buffer;
 
-  const uint16_t n_fields = message->n_fields;
+  const uint16_t field_count = message->field_count;
   const fix_field_t *fields = message->fields;
 
   *(uint64_t *)buffer = *(uint64_t *)"8=FIX.4.";
@@ -52,12 +52,12 @@ uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict messa
   *(uint32_t *)buffer = *(uint32_t *)"4\x01""9=";
   buffer += 4;
 
-  const uint16_t body_length = compute_body_length(fields, n_fields);
+  const uint16_t body_length = compute_body_length(fields, field_count);
   const uint8_t body_length_len = utoa(body_length, buffer);
   buffer += body_length_len;
   *buffer++ = '\x01';
 
-  for (uint16_t i = 0; LIKELY(i < n_fields); i++)
+  for (uint16_t i = 0; LIKELY(i < field_count); i++)
   {
     const char *tag = fields[0].tag;
     const char *value = fields[0].value;
@@ -117,10 +117,10 @@ uint16_t ff_serialize_raw(char *restrict buffer, const fix_message_t *restrict m
 {
   const char *const buffer_start = buffer;
 
-  const uint16_t n_fields = message->n_fields;
+  const uint16_t field_count = message->field_count;
   const fix_field_t *fields = message->fields;
 
-  for (uint16_t i = 0; LIKELY(i < n_fields); i++)
+  for (uint16_t i = 0; LIKELY(i < field_count); i++)
   {
     const char *tag = fields[0].tag;
     const char *value = fields[0].value;
@@ -140,12 +140,12 @@ uint16_t ff_serialize_raw(char *restrict buffer, const fix_message_t *restrict m
   return buffer - buffer_start;
 }
 
-static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t n_fields)
+static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t field_count)
 {
-  uint16_t total_len = (n_fields << 1);
+  uint16_t total_len = (field_count << 1);
 
 #ifdef __AVX512F__
-  while (LIKELY(n_fields >= 16))
+  while (LIKELY(field_count >= 16))
   {
     const __m512i lengths = _mm512_i32gather_epi32(_512_len_offsets, fields, sizeof(fix_field_t));
 
@@ -155,14 +155,14 @@ static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t n
     const __m512i sum = _mm512_add_epi32(tag_len, value_len);
     total_len += _mm512_reduce_add_epi32(sum);
 
-    n_fields -= 16;
+    field_count -= 16;
     fields += 16;
   }
 #endif
 
 //TODO: Implement AVX2 and SSE2 versions (they dont have reduce, so we need to use _mm256_extract_epi32 and _mm_extract_epi32)
 
-  while (LIKELY(n_fields--))
+  while (LIKELY(field_count--))
   {
     total_len += fields->tag_len + fields->value_len;
     fields++;

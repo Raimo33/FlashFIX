@@ -16,6 +16,6 @@ typedef struct
 typedef struct
 {
   fix_field_t fields[FIX_MAX_FIELDS];
-  uint16_t n_fields;
+  uint16_t field_count;
 } fix_message_t;
 ```

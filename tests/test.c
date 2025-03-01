@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-02-27 18:05:40                                                
+last edited: 2025-03-01 11:16:11                                                
 
 ================================================================================*/
 
@@ -25,10 +25,10 @@ int tests_run = 0;
 
 static bool compare_messages(const fix_message_t *a, const fix_message_t *b)
 {
-  if (a->n_fields != b->n_fields)
+  if (a->field_count != b->field_count)
     return false;
 
-  for (uint16_t i = 0; i < a->n_fields; i++)
+  for (uint16_t i = 0; i < a->field_count; i++)
   {
     const bool values_equal = memcmp(a->fields[i].value, b->fields[i].value, a->fields[i].value_len) == 0;
     const bool tags_equal = memcmp(a->fields[i].tag, b->fields[i].tag, a->fields[i].tag_len) == 0;

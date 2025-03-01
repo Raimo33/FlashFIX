@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-02-27 18:05:40                                                
+last edited: 2025-03-01 11:16:11                                                
 
 ================================================================================*/
 
@@ -115,7 +115,7 @@ static void fill_message_structs(fix_message_t *messages, char **tags, char **va
 {
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
-    messages[i].n_fields = i + 1;
+    messages[i].field_count = i + 1;
     messages[i].fields = aligned_calloc_p(MAX_FIELDS, sizeof(fix_field_t));
 
     for (uint16_t j = 0; j <= i; j++)
@@ -218,7 +218,7 @@ static void deserialize(char **buffers)
 
   fix_message_t message ALIGNED(ALIGNMENT) = {0};
   message.fields = aligned_calloc_p(MAX_FIELDS, sizeof(fix_field_t));
-  message.n_fields = MAX_FIELDS;
+  message.field_count = MAX_FIELDS;
 
   dprintf(fd, "# of fields, # of cpu cycles\n");
   for (uint16_t i = 0; i < MAX_FIELDS; i++)

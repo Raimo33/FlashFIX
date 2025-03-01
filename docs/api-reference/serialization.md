@@ -29,13 +29,13 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
   - `message` is `NULL`
   - `message` doesn't fit in the buffer
   - value_len and `tag_len` are different from the actual length of the value and tag
-  - `n_fields` is different from the actual number of fields in the message
+  - `field_count` is different from the actual number of fields in the message
   - non printable characters
   - `message` with `NULL` fields
   - `message` with empty `{}` fields array
   - `message` with empty `""` field strings 
   - `message` with `value_len == 0` or `tag_len == 0`
-  - `message` with `n_fields == 0`
+  - `message` with `field_count == 0`
 
 ## ff_serialize_raw
 
@@ -60,10 +60,10 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
   - `message->fields` is `NULL`
   - `message->fields` is not allocated
   - value_len and `tag_len` are different from the actual length of the value and tag
-  - `n_fields` is different from the actual number of fields in the message
+  - `field_count` is different from the actual number of fields in the message
   - non printable characters
   - `message` with `NULL` fields
   - `message` with empty `{}` fields array
   - `message` with empty `""` field strings 
   - `message` with `value_len == 0` or `tag_len == 0`
-  - `message` with `n_fields == 0`
+  - `message` with `field_count == 0`

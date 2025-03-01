@@ -20,7 +20,7 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
 ### Parameters
   - `buffer` - the buffer which contains the full serialized message
   - `buffer_size` - the size of the buffer in bytes
-  - `message` - the message struct where to store the deserialized fields, it should have the `fields` array already allocated and the `n_fields` field set to the size of the `fields` array (i.e. the maximum number of fields that can be stored)
+  - `message` - the message struct where to store the deserialized fields, it should have the `fields` array already allocated and the `field_count` field set to the size of the `fields` array (i.e. the maximum number of fields that can be stored)
 
 ### Returns
   - length of the deserialized message in bytes
@@ -31,7 +31,7 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
   - `message` is `NULL`
   - `message->fields` is `NULL`
   - `message->fields` is not allocated
-  - `message->n_fields` is different from the actual size of the `fields` array
+  - `message->field_count` is different from the actual size of the `fields` array
   - `buffer_size` is different from the actual size of the buffer
   - `buffer` does not contain a full message
   - `buffer` does not contain a full message
