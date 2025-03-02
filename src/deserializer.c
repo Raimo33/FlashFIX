@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-02 12:49:50                                                
+last edited: 2025-03-02 17:29:55                                                
 
 ================================================================================*/
 
@@ -88,9 +88,7 @@ uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, fix_message_t 
   const char *const body_start = buffer;
   const char *const checksum_start = get_checksum_start(buffer, remaining);
 
-  if (UNLIKELY(checksum_start - buffer != body_length))
-    return 0;
-  if (UNLIKELY(memcmp(checksum_start, "10=", 3)))
+  if (UNLIKELY((checksum_start - buffer != body_length) || (memcmp(checksum_start, "10=", 3))))
     return 0;
 
   buffer = (char *)checksum_start + STR_LEN("10=");
