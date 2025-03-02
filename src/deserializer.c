@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-02 18:50:22                                                
+last edited: 2025-03-02 19:09:19                                                
 
 ================================================================================*/
 
@@ -271,6 +271,9 @@ static bool tokenize(char *buffer, const char *const end, fix_message_t *const r
 static uint32_t atoui(const char *str, const char **endptr)
 {
   uint32_t result = 0;
+
+  if (UNLIKELY(!str))
+    return 0;
   
   str += strspn(str, " \t\n\r\v\f");
 
