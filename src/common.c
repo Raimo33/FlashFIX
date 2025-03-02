@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-24 16:35:15                                                 
-last edited: 2025-03-02 12:33:40                                                
+last edited: 2025-03-02 12:41:31                                                
 
 ================================================================================*/
 
@@ -65,17 +65,17 @@ uint8_t compute_checksum(const char *buffer,  const char *const end)
   }
 #endif
 
-#ifdef __AVX2__ //TODO modify to match the SSE version complexity
+#ifdef __AVX2__
   while (LIKELY(remaining >= 32))
   {
     const __m256i vec = _mm256_load_si256((const __m256i *)buffer);
     const __m256i sum = _mm256_sad_epu8(vec, _256_vec_zeros);
     
-    __m128i sum_low = _mm256_castsi256_si128(sum);
+    const __m128i sum_low = _mm256_extracti128_si256(sum, 0);
     const __m128i sum_high = _mm256_extracti128_si256(sum, 1);
-    sum_low = _mm_add_epi64(sum_low, sum_high);
+    const __m128i sum_total = _mm_add_epi64(sum_low, sum_high);
 
-    checksum += (uint8_t)(_mm_extract_epi64(sum_low, 0) + _mm_extract_epi64(sum_low, 1));
+    checksum += (uint8_t)(_mm_extract_epi64(sum_total, 0) + _mm_extract_epi64(sum_total, 1));
 
     buffer += 32;
     remaining -= 32;
