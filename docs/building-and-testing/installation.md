@@ -6,7 +6,7 @@ To install FlashFIX you must compile it from source, as that will guarantee the 
 
   - CMake 3.10 or later
   - gcc with c23 support
-  - CPU with unaligned memory access support
+  - CPU with misaligned memory access support
 
 ## Building
 
