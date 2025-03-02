@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-02 17:29:55                                                
+last edited: 2025-03-02 18:50:22                                                
 
 ================================================================================*/
 
@@ -117,7 +117,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
   uint16_t remaining = buffer_size - STR_LEN("10=000\x01") + 1;
 
   uint8_t unaligned_bytes = align_forward(buffer);
-  unaligned_bytes &= -(unaligned_bytes <= remaining);
+  unaligned_bytes -= (unaligned_bytes > remaining) & (unaligned_bytes - remaining);
 
   while (UNLIKELY(unaligned_bytes--))
   {

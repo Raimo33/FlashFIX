@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-24 16:35:15                                                 
-last edited: 2025-03-02 12:41:31                                                
+last edited: 2025-03-02 18:50:22                                                
 
 ================================================================================*/
 
@@ -43,7 +43,7 @@ uint8_t compute_checksum(const char *buffer,  const char *const end)
   uint16_t remaining = end - buffer;
   
   uint8_t unaligned_bytes = align_forward(buffer);
-  unaligned_bytes &= -(unaligned_bytes <= remaining);
+  unaligned_bytes -= (unaligned_bytes > remaining) & (unaligned_bytes - remaining);
 
   uint8_t checksum = 0;
 
