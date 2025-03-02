@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-02 12:33:40                                                
+last edited: 2025-03-02 12:49:50                                                
 
 ================================================================================*/
 
@@ -274,8 +274,7 @@ static uint32_t atoui(const char *str, const char **endptr)
 {
   uint32_t result = 0;
   
-  while (UNLIKELY(*str == ' ')) //TODO skip all types of whitespaces
-    str++;
+  str += strspn(str, " \t\n\r\v\f");
 
   while (LIKELY((uint8_t)(*str - '0') < 10))
   {
