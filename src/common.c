@@ -5,40 +5,71 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-24 16:35:15                                                 
-last edited: 2025-02-24 16:35:15                                                
+last edited: 2025-03-02 12:33:40                                                
 
 ================================================================================*/
 
 #include "common.h"
 
-uint8_t compute_checksum(const char *buffer, const char *end)
-{
-  uint8_t checksum = 0;
-  const char *aligned_buffer = align_forward(buffer);
-
-  while (UNLIKELY(buffer < aligned_buffer && buffer < end))
-    checksum += *buffer++;
-
 #ifdef __AVX512F__
-  while (LIKELY(buffer + 64 <= end))
-  {
-    PREFETCHR(buffer + 128, 3);
-
-    const __m512i vec = _mm512_load_si512((const __m512i *)buffer);
-    const __m512i sum = _mm512_sad_epu8(vec, _mm512_setzero_si512());
-    checksum += (uint8_t)_mm512_reduce_add_epi64(sum);
-
-    buffer += 64;
-  }
+  static __m512i _512_vec_zeros;
 #endif
 
 #ifdef __AVX2__
-  while (LIKELY(buffer + 32 <= end))
-  {
-    PREFETCHR(buffer + 64, 3);
+  static __m256i _256_vec_zeros;
+#endif
 
+#ifdef __SSE2__
+  static __m128i _128_vec_zeros;
+#endif
+
+CONSTRUCTOR void ff_common_init(void)
+{
+#ifdef __AVX512F__
+  _512_vec_zeros = _mm512_setzero_si512();
+#endif
+
+#ifdef __AVX2__
+  _256_vec_zeros = _mm256_setzero_si256();
+#endif
+
+#ifdef __SSE2__
+  _128_vec_zeros = _mm_setzero_si128();
+#endif
+}
+
+uint8_t compute_checksum(const char *buffer,  const char *const end)
+{
+  uint16_t remaining = end - buffer;
+  
+  uint8_t unaligned_bytes = align_forward(buffer);
+  unaligned_bytes &= -(unaligned_bytes <= remaining);
+
+  uint8_t checksum = 0;
+
+  while (UNLIKELY(unaligned_bytes--))
+  {
+    checksum += *buffer++;
+    remaining--;
+  }
+
+#ifdef __AVX512F__
+  while (LIKELY(remaining >= 64))
+  {
+    const __m512i vec = _mm512_load_si512((const __m512i *)buffer);
+    const __m512i sum = _mm512_sad_epu8(vec, _512_vec_zeros);
+    checksum += (uint8_t)_mm512_reduce_add_epi64(sum);
+
+    buffer += 64;
+    remaining -= 64;
+  }
+#endif
+
+#ifdef __AVX2__ //TODO modify to match the SSE version complexity
+  while (LIKELY(remaining >= 32))
+  {
     const __m256i vec = _mm256_load_si256((const __m256i *)buffer);
-    const __m256i sum = _mm256_sad_epu8(vec, _mm256_setzero_si256());
+    const __m256i sum = _mm256_sad_epu8(vec, _256_vec_zeros);
     
     __m128i sum_low = _mm256_castsi256_si128(sum);
     const __m128i sum_high = _mm256_extracti128_si256(sum, 1);
@@ -47,24 +78,24 @@ uint8_t compute_checksum(const char *buffer, const char *end)
     checksum += (uint8_t)(_mm_extract_epi64(sum_low, 0) + _mm_extract_epi64(sum_low, 1));
 
     buffer += 32;
+    remaining -= 32;
   }
 #endif
 
 #ifdef __SSE4_1__
-  while (LIKELY(buffer + 16 <= end))
+  while (LIKELY(remaining >= 16))
   {
-    PREFETCHR(buffer + 32, 3);
-
     const __m128i vec = _mm_load_si128((const __m128i *)buffer);
-    const __m128i sum = _mm_sad_epu8(vec, _mm_setzero_si128());
+    const __m128i sum = _mm_sad_epu8(vec, _128_vec_zeros);
 
     checksum += (uint8_t)(_mm_extract_epi64(sum, 0) + _mm_extract_epi64(sum, 1));
 
     buffer += 16;
+    remaining -= 16;
   }
 #endif
 
-  while (LIKELY(buffer + 8 <= end))
+  while (LIKELY(remaining >= 8))
   {
     uint64_t chunk = *(const uint64_t *)buffer;
 
@@ -75,9 +106,10 @@ uint8_t compute_checksum(const char *buffer, const char *end)
     checksum += (uint8_t)chunk;
     
     buffer += 8;
+    remaining -= 8;
   }
 
-  while (LIKELY(buffer < end))
+  while (LIKELY(remaining--))
     checksum += *buffer++;
 
   return checksum;

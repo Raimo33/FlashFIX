@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 14:56:11                                                 
-last edited: 2025-03-01 10:59:00                                                
+last edited: 2025-03-02 12:33:40                                                
 
 ================================================================================*/
 
@@ -30,10 +30,10 @@ last edited: 2025-03-01 10:59:00
   # define ALIGNMENT sizeof(void *)
 # endif
 
-INTERNAL uint8_t compute_checksum(const char *buffer, const char *end);
-INTERNAL ALWAYS_INLINE inline void *align_forward(const void *ptr)
+INTERNAL uint8_t compute_checksum(const char *buffer, const char *const end);
+INTERNAL ALWAYS_INLINE inline uint8_t align_forward(const void *const ptr)
 {
-  return (void *)(((uintptr_t)ptr + ALIGNMENT - 1) & -ALIGNMENT);
+  return -(uintptr_t)ptr & (ALIGNMENT - 1);
 }
 
 #endif

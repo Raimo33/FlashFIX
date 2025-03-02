@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-10 21:08:13                                                 
-last edited: 2025-03-01 18:04:44                                                
+last edited: 2025-03-02 12:33:40                                                
 
 ================================================================================*/
 
@@ -122,7 +122,7 @@ static char *test_serialize_normal_message(void)
     "10=127\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
-  char buffer[sizeof(expected_buffer)];
+  char buffer[sizeof(expected_buffer)] = {0};
   uint16_t len = ff_serialize(buffer, &message);
 
   mu_assert("error: serialize normal message: wrong length", len == expected_len);
@@ -144,7 +144,7 @@ static char *test_serialize_one_field_message(void)
     "10=216\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
-  char buffer[sizeof(expected_buffer)];
+  char buffer[sizeof(expected_buffer)] = {0};
   uint16_t len = ff_serialize(buffer, &message);
 
   mu_assert("error: serialize one field message: wrong length", len == expected_len);
@@ -177,7 +177,7 @@ static char *test_serialize_raw_normal_message(void)
     "108=30\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
-  char buffer[sizeof(expected_buffer)];
+  char buffer[sizeof(expected_buffer)] = {0};
   uint16_t len = ff_serialize_raw(buffer, &message);
 
   mu_assert("error: serialize raw normal message: wrong length", len == expected_len);
@@ -196,7 +196,7 @@ static char *test_serialize_raw_one_field_message(void)
     "6=123\x01";
   constexpr uint16_t expected_len = sizeof(expected_buffer) - 1;
 
-  char buffer[sizeof(expected_buffer)];
+  char buffer[sizeof(expected_buffer)] = {0};
   uint16_t len = ff_serialize_raw(buffer, &message);
 
   mu_assert("error: serialize raw one field message: wrong length", len == expected_len);

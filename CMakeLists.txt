@@ -25,7 +25,7 @@ set(FLASHFIX_PUBLIC_HEADERS
 )
 
 set(FLASHFIX_COMPILE_OPTIONS
-  -Wall -Wextra -Werror -Wpedantic
+  -Wall -Wextra -Werror -Wpedantic -g
   -fwrapv -fno-strict-aliasing -Ofast -march=native -flto
   -fno-semantic-interposition -fno-stack-protector -fno-plt 
   -fno-asynchronous-unwind-tables -funroll-loops -fomit-frame-pointer

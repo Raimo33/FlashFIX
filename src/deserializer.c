@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-01 18:04:44                                                
+last edited: 2025-03-02 12:33:40                                                
 
 ================================================================================*/
 
@@ -116,19 +116,22 @@ bool ff_is_complete(const char *buffer, const uint16_t len)
 //TODO optimize, bottleneck, 93% of the time spent here
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
-  const char *const last = buffer + buffer_size - STR_LEN("10=000\x01");
-  const char *const aligned_buffer = align_forward(buffer);
+  uint16_t remaining = buffer_size - STR_LEN("10=000\x01") + 1;
 
-  while (UNLIKELY(buffer < aligned_buffer && buffer <= last))
+  uint8_t unaligned_bytes = align_forward(buffer);
+  unaligned_bytes &= -(unaligned_bytes <= remaining);
+
+  while (UNLIKELY(unaligned_bytes--))
   {
     if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
       return buffer;
 
     buffer++;
+    remaining--;
   }
 
 #ifdef __AVX512F__
-  while (LIKELY(buffer + 64 <= last))
+  while (LIKELY(remaining >= 64))
   {
     const __m512i chunk = _mm512_load_si512((__m512i*)buffer);
     const __m512i cmp = _mm512_cmpeq_epi8(chunk, _512_vec_ones);
@@ -146,12 +149,13 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
     }
 
     buffer += 64;
+    remaining -= 64;
   }
 
 #endif
 
 #ifdef __AVX2__
-  while (LIKELY(buffer + 32 <= last))
+  while (LIKELY(remaining >= 32))
   {
     const __m256i chunk = _mm256_load_si256((__m256i *)buffer);
     const __m256i cmp = _mm256_cmpeq_epi8(chunk, _256_vec_ones);
@@ -169,11 +173,12 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
     }
 
     buffer += 32;
+    remaining -= 32;
   }
 #endif
 
 #ifdef __SSE2__
-  while (LIKELY(buffer + 16 <= last))
+  while (LIKELY(remaining >= 16))
   {
     const __m128i chunk = _mm_load_si128((__m128i *)buffer);
     const __m128i cmp = _mm_cmpeq_epi8(chunk, _128_vec_ones);
@@ -191,14 +196,14 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
     }
 
     buffer += 16;
+    remaining -= 16;
   }
 #endif
 
-  constexpr uint64_t repeated = 0x3131313131313131ULL; 
-  while (LIKELY(buffer + 8 <= last))
+  while (LIKELY(remaining >= 8))
   {
     const uint64_t chunk = *(const uint64_t *)buffer;
-    const uint64_t cmp = chunk ^ repeated;
+    const uint64_t cmp = chunk ^ 0x3131313131313131ULL;
     uint64_t mask = (cmp - 0x0101010101010101ULL) & ~cmp & 0x8080808080808080ULL;
 
     while (UNLIKELY(mask))
@@ -213,12 +218,14 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
     }
 
     buffer += 8;
+    remaining -= 8;
   }
 
-  while (LIKELY(buffer <= last))
+  while (LIKELY(remaining--))
   {
     if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
       return buffer;
+
     buffer++;
   }
 
