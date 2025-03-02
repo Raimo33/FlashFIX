@@ -30,7 +30,6 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
   - `message` doesn't fit in the buffer
   - value_len and `tag_len` are different from the actual length of the value and tag
   - `field_count` is different from the actual number of fields in the message
-  - non printable characters
   - `message` with `NULL` fields
   - `message` with empty `{}` fields array
   - `message` with empty `""` field strings 
@@ -59,9 +58,8 @@ serializes a fix message into a buffer by concatenating the fields with '=' and 
   - `message` doesn't fit in the buffer
   - `message->fields` is `NULL`
   - `message->fields` is not allocated
-  - value_len and `tag_len` are different from the actual length of the value and tag
+  - `value_len` and `tag_len` are different from the actual length of the value and tag
   - `field_count` is different from the actual number of fields in the message
-  - non printable characters
   - `message` with `NULL` fields
   - `message` with empty `{}` fields array
   - `message` with empty `""` field strings 

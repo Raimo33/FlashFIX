@@ -27,7 +27,7 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
 
 ### Returns
   - length of the deserialized message in bytes
-  - `0` in case of error (see below)
+  - `0` in case of error (see [Errors](#errors))
 
 ### Undefined Behavior
   - `buffer` is `NULL`
@@ -37,8 +37,6 @@ deserializes a fix message by tokenizing the buffer **in place**: replacing `'='
   - `message->field_count` is different from the actual size of the `fields` array
   - `buffer_size` is different from the actual size of the buffer
   - `buffer` does not contain a full message
-  - `buffer` does not contain a full message
-  - `buffer` contains non printable characters
 
 ### Errors
   - wrong beginstring
