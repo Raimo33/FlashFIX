@@ -232,7 +232,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
 static inline bool check_zero_equal_soh(const char *buffer)
 {
-  return *(uint16_t *)(buffer) == *(uint16_t *)"0=" && buffer[5] == '\x01';
+  return (*(uint16_t *)(buffer) == *(uint16_t *)"0=") & (buffer[5] == '\x01');
 }
 
 static bool tokenize(char *buffer, const char *const end, fix_message_t *const restrict message)
@@ -283,7 +283,9 @@ static uint32_t atoui(const char *str, const char **endptr)
     str++;
   }
 
-  (void)(endptr && (*endptr = str));
+  if (endptr) //TODO branchless
+    *endptr = str;
+
   return result;
 }
 

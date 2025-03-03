@@ -56,6 +56,7 @@ uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict messa
   buffer += body_length_len;
   *buffer++ = '\x01';
 
+  //TODO code duplication (see ff_serialize_raw)
   for (uint16_t i = 0; LIKELY(i < field_count); i++)
   {
     const char *tag = fields[0].tag;
@@ -163,7 +164,7 @@ static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t f
 
   while (LIKELY(field_count--))
   {
-    total_len += fields->tag_len + fields->value_len;
+    total_len += fields->tag_len + fields->value_len; //TODO too many dereferences
     fields++;
   }
 
