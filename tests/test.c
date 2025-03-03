@@ -242,9 +242,6 @@ static char *test_deserialize_normal_message(void)
   fix_message_t message = { fields, ARR_SIZE(fields) };
   uint16_t len = ff_deserialize(buffer, sizeof(buffer), &message);
 
-  printf("length: %d\n", expected_len);
-  printf("length: %d\n", len);
-
   mu_assert("error: deserialize normal message: wrong length", len == expected_len);
   mu_assert("error: deserialize normal message: wrong message", compare_messages(&message, &expected_message));
 

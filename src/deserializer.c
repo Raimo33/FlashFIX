@@ -85,8 +85,7 @@ uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, fix_message_t 
   const char *const body_start = buffer;
   const char *const checksum_start = get_checksum_start(buffer, remaining);
 
-  valid = checksum_start;
-  valid &= body_length == checksum_start - body_start;
+  valid = (checksum_start != NULL) & (body_length == checksum_start - body_start);
   if (UNLIKELY(!valid))
     return 0;
 
@@ -118,7 +117,10 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
   while (UNLIKELY(misaligned_bytes--))
   {
-    if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
+    bool found = buffer[0] == '1';
+    found &= check_zero_equal_soh(buffer + 1);
+
+    if (UNLIKELY(found))
       return buffer;
 
     buffer++;
@@ -146,7 +148,6 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
     buffer += 64;
     remaining -= 64;
   }
-
 #endif
 
 #ifdef __AVX2__
@@ -218,7 +219,9 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
   while (LIKELY(remaining--))
   {
-    if (buffer[0] == '1' && check_zero_equal_soh(buffer + 1))
+    bool found = (buffer[0] == '1') & check_zero_equal_soh(buffer + 1);
+
+    if (UNLIKELY(found))
       return buffer;
 
     buffer++;
@@ -248,7 +251,7 @@ static bool tokenize(char *buffer, const char *const end, fix_message_t *const r
     const uint16_t value_len = soh - delim;
     *soh++ = '\0';
 
-    if (UNLIKELY(field_count++ >= max_fields)) //TODO merge into the while conditional. remove branch
+    if (UNLIKELY(field_count++ >= max_fields))
       return false;
     
     *fields++ = (fix_field_t){
