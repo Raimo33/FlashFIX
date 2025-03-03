@@ -64,46 +64,46 @@ CONSTRUCTOR void ff_deserializer_init(void)
   _128_vec_soh    = _mm_set1_epi8('\x01');
 #endif
 }
-
+#include <stdio.h>
 uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, fix_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
   
-  if (UNLIKELY(memcmp(buffer, "8=FIX.4.4\x01", 10)))
+  bool valid = (buffer_size >= STR_LEN("8=FIX.4.4\x019=0\x01""10=000\x01"));
+  valid &= (*(uint64_t *)buffer == *(uint64_t *)"8=FIX.4.");
+  valid &= (*(uint32_t *)(buffer + 8) == *(uint32_t *)"4\x01""9=");
+
+  if (UNLIKELY(!valid))
     return 0;
   
-  buffer += STR_LEN("8=FIX.4.4\x01");
-
-  if (UNLIKELY(memcmp(buffer, "9=", 2)))
-    return 0;
-
-  buffer += STR_LEN("9=");
+  buffer += STR_LEN("8=FIX.4.4\x019=");
 
   const uint16_t body_length = (uint16_t)atoui(buffer, (const char **)&buffer);
-
-  if (UNLIKELY(*buffer++ != '\x01'))
+  if (UNLIKELY(*buffer++ != '\x01')) //TODO fix error here
+  {
+    printf("error: ff_deserialize: no soh after body length\n"); 
     return 0;
+  }
 
   const uint16_t remaining = buffer_size - (buffer - buffer_start);
   const char *const body_start = buffer;
   const char *const checksum_start = get_checksum_start(buffer, remaining);
 
-  if (UNLIKELY((checksum_start - buffer != body_length) || (memcmp(checksum_start, "10=", 3))))
+  valid = !!checksum_start;
+  valid &= (body_length == checksum_start - body_start);
+  if (UNLIKELY(!valid))
     return 0;
 
   buffer = (char *)checksum_start + STR_LEN("10=");
 
   const uint8_t expected_checksum = compute_checksum(buffer_start, checksum_start);
   const uint8_t provided_checksum = (uint8_t)atoui(buffer, (const char **)&buffer);
-  if (UNLIKELY(expected_checksum != provided_checksum))
-    return 0;
-
   buffer += STR_LEN("\x01");
 
-  if (UNLIKELY(!tokenize((char *)body_start, checksum_start, message)))
-    return 0;
+  valid = (expected_checksum == provided_checksum);
+  valid &= tokenize((char *)body_start, checksum_start, message);
 
-  return buffer - buffer_start;
+  return (buffer - buffer_start) * valid;
 }
 
 bool ff_is_complete(const char *buffer, const uint16_t len)
@@ -114,7 +114,9 @@ bool ff_is_complete(const char *buffer, const uint16_t len)
 //TODO optimize, bottleneck, 93% of the time spent here
 static const char *get_checksum_start(const char *buffer, const uint16_t buffer_size)
 {
-  uint16_t remaining = buffer_size - STR_LEN("10=000\x01") + 1;
+  int32_t remaining = buffer_size - STR_LEN("10=000\x01") + 1;
+  if (UNLIKELY(remaining <= 0))
+    return NULL;
 
   uint8_t misaligned_bytes = align_forward(buffer);
   misaligned_bytes -= (misaligned_bytes > remaining) * (misaligned_bytes - remaining);
@@ -251,7 +253,7 @@ static bool tokenize(char *buffer, const char *const end, fix_message_t *const r
     const uint16_t value_len = soh - delim;
     *soh++ = '\0';
 
-    if (UNLIKELY(field_count++ >= max_fields))
+    if (UNLIKELY(field_count++ >= max_fields)) //TODO merge into the while conditional. remove branch
       return false;
     
     *fields++ = (fix_field_t){
@@ -274,7 +276,7 @@ static uint32_t atoui(const char *str, const char **endptr)
 
   if (UNLIKELY(!str))
     return 0;
-  
+
   str += strspn(str, " \t\n\r\v\f");
 
   while (LIKELY((uint8_t)(*str - '0') < 10))
