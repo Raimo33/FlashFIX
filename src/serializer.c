@@ -14,7 +14,6 @@ last edited: 2025-03-01 11:16:11
 #include <string.h>
 
 static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t field_count);
-ALWAYS_INLINE static inline int32_t horizontal_sum128(__m128i vec);
 static uint8_t utoa(uint16_t num, char *buffer);
 ALWAYS_INLINE static inline uint16_t div100(uint16_t n);
 ALWAYS_INLINE static inline uint16_t mul100(uint16_t n);
@@ -169,18 +168,6 @@ static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t f
   }
 
   return total_len;
-}
-
-static inline int32_t horizontal_sum128(__m128i vec)
-{
-#ifdef __SSE3__
-  vec = _mm_hadd_epi32(vec, vec);
-  vec = _mm_hadd_epi32(vec, vec);
-#else
-  vec = _mm_add_epi32(vec, _mm_shuffle_epi32(vec, _MM_SHUFFLE(2, 3, 0, 1)));
-  vec = _mm_add_epi32(vec, _mm_shuffle_epi32(vec, _MM_SHUFFLE(1, 0, 3, 2)));
-#endif
-  return _mm_cvtsi128_si32(vec);
 }
 
 static uint8_t utoa(uint16_t num, char *buffer)
