@@ -64,35 +64,40 @@ CONSTRUCTOR void ff_deserializer_init(void)
   _128_vec_soh    = _mm_set1_epi8('\x01');
 #endif
 }
-#include <stdio.h>
+
 uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, fix_message_t *restrict message)
 {
   const char *const buffer_start = buffer;
-  
-  if (UNLIKELY(buffer_size < STR_LEN("8=FIX.4.4\x019=0\x01""10=000\x01") || *(uint64_t *)buffer != *(uint64_t *)"8=FIX.4." || *(uint32_t *)(buffer + 8) != *(uint32_t *)"4\x01""9="))
+
+  bool valid = buffer_size >= STR_LEN("8=FIX.4.4\x019=0\x01""10=000\x01");
+  valid &= *(uint64_t *)buffer == *(uint64_t *)"8=FIX.4.";
+  valid &= *(uint32_t *)(buffer + 8) == *(uint32_t *)"4\x01""9=";
+
+  if (UNLIKELY(!valid))
     return 0;  
-  buffer += STR_LEN("8=FIX.4.4\x019=");
+  buffer += STR_LEN("8=FIX.4.4\x01""9=");
 
   const uint16_t body_length = (uint16_t)atoui(buffer, (const char **)&buffer);
-  if (UNLIKELY(*buffer++ != '\x01')) //TODO fix error here
-  {
-    printf("error: ff_deserialize: no soh after body length\n"); 
+  if (UNLIKELY(*buffer++ != '\x01'))
     return 0;
-  }
 
   const uint16_t remaining = buffer_size - (buffer - buffer_start);
   const char *const body_start = buffer;
   const char *const checksum_start = get_checksum_start(buffer, remaining);
 
-  if (UNLIKELY(!checksum_start || body_length != checksum_start - body_start))
+  valid = checksum_start;
+  valid &= body_length == checksum_start - body_start;
+  if (UNLIKELY(!valid))
     return 0;
+
   buffer = (char *)checksum_start + STR_LEN("10=");
 
   const uint8_t expected_checksum = compute_checksum(buffer_start, checksum_start);
   const uint8_t provided_checksum = (uint8_t)atoui(buffer, (const char **)&buffer);
   buffer += STR_LEN("\x01");
 
-  bool valid = (expected_checksum == provided_checksum) && tokenize((char *)body_start, checksum_start, message);
+  valid = (expected_checksum == provided_checksum);
+  valid &= tokenize((char *)body_start, checksum_start, message);
   return (buffer - buffer_start) * valid;
 }
 
