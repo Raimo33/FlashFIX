@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-01 11:16:11                                                
+last edited: 2025-03-03 18:01:32                                                
 
 ================================================================================*/
 
@@ -164,7 +164,7 @@ static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t f
 
   while (LIKELY(field_count--))
   {
-    total_len += fields->tag_len + fields->value_len; //TODO too many dereferences
+    total_len += fields->tag_len + fields->value_len;
     fields++;
   }
 

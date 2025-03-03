@@ -5,7 +5,7 @@
 *.o
 *.so
 libflashfix.*
-test
+test*
 benchmark
 benchmark
 *.dll
