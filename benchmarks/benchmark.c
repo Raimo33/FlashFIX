@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-03-04 12:18:32                                                
+last edited: 2025-03-04 20:49:22                                                
 
 ================================================================================*/
 
@@ -44,7 +44,7 @@ static double gaussian_rand(const double mean, const double stddev);
 static inline uint16_t clamp(const uint16_t n, const uint16_t min, const uint16_t max);
 static uint8_t compute_checksum(const char *buffer, const uint16_t len);
 static uint32_t open_p(const char *pathname, const int32_t flags, const mode_t mode);
-static void *malloc_p(const size_t n, const size_t size);
+static void *calloc_p(const size_t n, const size_t size);
 static void free_strings(char **strings, const uint16_t n);
 static void free_message_structs(fix_message_t *messages);
 
@@ -52,14 +52,14 @@ int32_t main(void)
 {
   static_assert(BUFFER_SIZE < UINT16_MAX, "BUFFER_SIZE must be less than UINT16_MAX");
 
-  char **tags = malloc_p(MAX_FIELDS, sizeof(char *));
-  char **values = malloc_p(MAX_FIELDS, sizeof(char *));
+  char **tags = calloc_p(MAX_FIELDS, sizeof(char *));
+  char **values = calloc_p(MAX_FIELDS, sizeof(char *));
 
   init_random_tags(tags);
   init_random_values(values);
   
   {
-    fix_message_t *message_structs = malloc_p(MAX_FIELDS, sizeof(fix_message_t));
+    fix_message_t *message_structs = calloc_p(MAX_FIELDS, sizeof(fix_message_t));
     
     fill_message_structs(message_structs, tags, values);
     
@@ -71,8 +71,8 @@ int32_t main(void)
   }
   
   {
-    char **message_buffers = malloc_p(MAX_FIELDS, sizeof(char *));
-    uint16_t *message_lengths = malloc_p(MAX_FIELDS, sizeof(uint16_t));
+    char **message_buffers = calloc_p(MAX_FIELDS, sizeof(char *));
+    uint16_t *message_lengths = calloc_p(MAX_FIELDS, sizeof(uint16_t));
     
     fill_message_buffers(message_buffers, tags, values);
     fill_message_lengths(message_lengths, message_buffers);
@@ -85,6 +85,8 @@ int32_t main(void)
   
   free_strings(tags, MAX_FIELDS);
   free_strings(values, MAX_FIELDS);
+  free(tags);
+  free(values);
 }
 
 
@@ -111,7 +113,7 @@ static void fill_message_structs(fix_message_t *messages, char **tags, char **va
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     messages[i].field_count = i + 1;
-    messages[i].fields = malloc_p(MAX_FIELDS, sizeof(fix_field_t));
+    messages[i].fields = calloc_p(MAX_FIELDS, sizeof(fix_field_t));
 
     for (uint16_t j = 0; j <= i; j++)
     {
@@ -130,7 +132,7 @@ static void fill_message_buffers(char **buffers, char **tags, char **values)
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     char temp_body[BUFFER_SIZE] ALIGNED(ALIGNMENT) = {0};
-    char *buffer = buffers[i] = malloc_p(BUFFER_SIZE, sizeof(char));
+    char *buffer = buffers[i] = calloc_p(BUFFER_SIZE, sizeof(char));
     int total = 0;
 
     total += sprintf(buffer + total, "8=FIX.4.4\x01");
@@ -203,8 +205,6 @@ static void serialize_raw(fix_message_t *messages)
   
     const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
     dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
-
-    messages++;
   }
 
   close(fd);
@@ -218,13 +218,14 @@ static void deserialize(char **buffers)
   uint32_t aux;
 
   fix_message_t message ALIGNED(ALIGNMENT) = {0};
-  message.fields = malloc_p(MAX_FIELDS, sizeof(fix_field_t));
+  message.fields = calloc_p(MAX_FIELDS, sizeof(fix_field_t));
   message.field_count = MAX_FIELDS;
-
+  
   dprintf(fd, "# of fields, # of cpu cycles\n");
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
-    char *buffer = buffers[i];
+    char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT);
+    memcpy(buffer, buffers[i], BUFFER_SIZE);
 
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
@@ -243,7 +244,7 @@ static char *generate_random_string(const char *charset, const uint8_t charset_l
 {
   uint16_t len = gaussian_rand(median_len, 1);
   len = clamp(len, 1, max_len);
-  char *str = malloc_p(len + 1, sizeof(char));
+  char *str = calloc_p(len + 1, sizeof(char));
 
   for (uint16_t i = 0; i < len; i++)
     str[i] = charset[rand() % charset_len];
@@ -284,16 +285,14 @@ static uint32_t open_p(const char *pathname, const int32_t flags, const mode_t m
   return fd;
 }
 
-static void *malloc_p(const size_t n, const size_t size)
+static void *calloc_p(const size_t n, const size_t size)
 {
-  void *ptr;
-  posix_memalign(&ptr, ALIGNMENT, n * size);
+  void *ptr = calloc(n, size);
   if (!ptr)
   {
     perror(strerror(errno));
     exit(EXIT_FAILURE);
   }
-  bzero(ptr, n * size);
   return ptr;
 }
 
