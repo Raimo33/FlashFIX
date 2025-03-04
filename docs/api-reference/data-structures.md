@@ -9,8 +9,8 @@ typedef struct
 {
   uint16_t tag_len;
   uint16_t value_len;
-  const char *tag;
-  const char *value;
+  char *tag;
+  char *value;
 } fix_field_t;
 
 typedef struct

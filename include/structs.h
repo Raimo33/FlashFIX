@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-13 13:38:07                                                 
-last edited: 2025-03-01 11:16:11                                                
+last edited: 2025-03-04 12:18:32                                                
 
 ================================================================================*/
 
@@ -18,8 +18,8 @@ typedef struct
 {
   uint16_t tag_len;
   uint16_t value_len;
-  const char *tag;
-  const char *value;
+  char *tag;
+  char *value;
 } fix_field_t;
 
 typedef struct

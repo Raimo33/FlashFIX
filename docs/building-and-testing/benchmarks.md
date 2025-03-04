@@ -1,7 +1,7 @@
 # Benchmarks
 
 The benchmarks are the result of 1 million iterations per test, with randomly generated tags and values following a gaussian distribution.
-Thy're are performed on the static library compiled following the [installation guide](installation.md) and they measure time complexity in terms of clock cycles rather than seconds, draw your own conclusions according to your CPU clock-speed.
+Thy're are performed on the static library compiled following the [installation guide](installation.md) and they measure execution speed in terms of clock cycles rather than seconds, draw your own conclusions according to your CPU clock-speed.
 
 ### Comments:
   - The benchmarks were run using only aligned memory, mostly static, with exception for the actual random strings.

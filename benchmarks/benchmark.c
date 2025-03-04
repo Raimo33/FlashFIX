@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-03-04 10:48:32                                                
+last edited: 2025-03-04 12:18:32                                                
 
 ================================================================================*/
 
@@ -168,15 +168,15 @@ static void serialize(fix_message_t *messages)
   dprintf(fd, "# of fields, # of cpu cycles\n");
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
+    fix_message_t message = messages[i];
+
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
-      ff_serialize(buffer, messages);
+      ff_serialize(buffer, &message);
     end = __rdtscp(&aux);
   
     const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
     dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
-
-    messages++;
   }
 
   close(fd);
@@ -194,9 +194,11 @@ static void serialize_raw(fix_message_t *messages)
   dprintf(fd, "# of fields, # of cpu cycles\n");
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
+    fix_message_t message = messages[i];
+
     start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
-      ff_serialize_raw(buffer, messages);
+      ff_serialize_raw(buffer, &message);
     end = __rdtscp(&aux);
   
     const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
