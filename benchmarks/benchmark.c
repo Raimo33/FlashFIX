@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-03-04 20:49:22                                                
+last edited: 2025-03-04 20:59:40                                                
 
 ================================================================================*/
 
@@ -171,13 +171,18 @@ static void serialize(fix_message_t *messages)
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     fix_message_t message = messages[i];
+    uint64_t total_cycles = 0;
 
-    start = __rdtscp(&aux);
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
+    {
+      start = __rdtscp(&aux);
       ff_serialize(buffer, &message);
-    end = __rdtscp(&aux);
+      end = __rdtscp(&aux);
+
+      total_cycles += (end - start);
+    }
   
-    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
+    const uint64_t avg_cpu_cycles = total_cycles / N_ITERATIONS;
     dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
   }
 
@@ -197,13 +202,18 @@ static void serialize_raw(fix_message_t *messages)
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     fix_message_t message = messages[i];
-
-    start = __rdtscp(&aux);
+    uint64_t total_cycles = 0;
+    
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
+    {      
+      start = __rdtscp(&aux);
       ff_serialize_raw(buffer, &message);
-    end = __rdtscp(&aux);
+      end = __rdtscp(&aux);
+    
+      total_cycles += (end - start);
+    }
   
-    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
+    const uint64_t avg_cpu_cycles = total_cycles / N_ITERATIONS;
     dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
   }
 
@@ -216,7 +226,7 @@ static void deserialize(char **buffers)
   
   uint64_t start, end;
   uint32_t aux;
-
+  
   fix_message_t message ALIGNED(ALIGNMENT) = {0};
   message.fields = calloc_p(MAX_FIELDS, sizeof(fix_field_t));
   message.field_count = MAX_FIELDS;
@@ -225,14 +235,21 @@ static void deserialize(char **buffers)
   for (uint16_t i = 0; i < MAX_FIELDS; i++)
   {
     char buffer[BUFFER_SIZE] ALIGNED(ALIGNMENT);
-    memcpy(buffer, buffers[i], BUFFER_SIZE);
-
-    start = __rdtscp(&aux);
+    uint64_t total_cycles = 0;
+    
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
+    {
+      bzero(buffer, BUFFER_SIZE);
+      memcpy(buffer, buffers[i], BUFFER_SIZE);
+
+      start = __rdtscp(&aux);
       ff_deserialize(buffer, BUFFER_SIZE, &message);
-    end = __rdtscp(&aux);
+      end = __rdtscp(&aux);
+
+      total_cycles += (end - start);
+    }
   
-    const uint64_t avg_cpu_cycles = (end - start) / N_ITERATIONS;
+    const uint64_t avg_cpu_cycles = total_cycles / N_ITERATIONS;
     dprintf(fd, "%d, %lu\n", i + 1, avg_cpu_cycles);
   }
 
