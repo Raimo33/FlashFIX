@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-03-01 11:16:11                                                
+last edited: 2025-03-04 10:25:16                                                
 
 ================================================================================*/
 
@@ -38,7 +38,6 @@ static void fill_message_lengths(uint16_t *message_lengths, char **message_buffe
 static void serialize(fix_message_t *messages);
 static void serialize_raw(fix_message_t *messages);
 static void deserialize(char **buffers);
-static bool fits_buffer(char **tags, char **values);
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len);
 static double gaussian_rand(const double mean, const double stddev);
 static inline uint16_t clamp(const uint16_t n, const uint16_t min, const uint16_t max);
@@ -55,13 +54,8 @@ int32_t main(void)
   char **tags = aligned_calloc_p(MAX_FIELDS, sizeof(char *));
   char **values = aligned_calloc_p(MAX_FIELDS, sizeof(char *));
 
-  do {
-    bzero(tags, MAX_FIELDS * sizeof(char *));
-    bzero(values, MAX_FIELDS * sizeof(char *));
-
-    init_random_tags(tags);
-    init_random_values(values);
-  } while (!fits_buffer(tags, values));
+  init_random_tags(tags);
+  init_random_values(values);
   
   {
     fix_message_t *message_structs = aligned_calloc_p(MAX_FIELDS, sizeof(fix_message_t));
@@ -234,16 +228,6 @@ static void deserialize(char **buffers)
 
   free(message.fields);
   close(fd);
-}
-
-static bool fits_buffer(char **tags, char **values)
-{
-  uint16_t total_len = STR_LEN("8=FIX.4.4|9=000000000|10=000|");
-
-  for (uint32_t i = 0; i < MAX_FIELDS; i++)
-    total_len += strlen(tags[i]) + strlen(values[i]) + 2;
-
-  return total_len < BUFFER_SIZE;
 }
 
 static char *generate_random_string(const char *charset, const uint8_t charset_len, const uint16_t median_len, const uint16_t max_len)
