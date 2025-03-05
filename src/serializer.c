@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-03 18:01:32                                                
+last edited: 2025-03-05 20:59:03                                                
 
 ================================================================================*/
 
@@ -46,9 +46,9 @@ uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict messa
   const uint16_t field_count = message->field_count;
   const fix_field_t *fields = message->fields;
 
-  *(uint64_t *)buffer = *(uint64_t *)"8=FIX.4.";
+  memcpy8(buffer, "8=FIX.4.");
   buffer += 8;
-  *(uint32_t *)buffer = *(uint32_t *)"4\x01""9=";
+  memcpy4(buffer, "4\x01""9=");
   buffer += 4;
 
   const uint16_t body_length = compute_body_length(fields, field_count);
@@ -104,10 +104,10 @@ uint16_t ff_serialize(char *restrict buffer, const fix_message_t *restrict messa
   };
 
   const uint8_t checksum = compute_checksum(buffer_start, buffer);
-  *(uint32_t *)buffer = *(uint32_t *)"10=";
-  buffer += 3;
 
-  *(uint32_t *)buffer = *(uint32_t *)checksum_table[checksum];
+  memcpy4(buffer, "10=");
+  buffer += 3;
+  memcpy4(buffer, checksum_table[checksum]);
   buffer += 4;
 
   return buffer - buffer_start;
@@ -171,6 +171,7 @@ static inline uint16_t compute_body_length(const fix_field_t *fields, uint16_t f
   return total_len;
 }
 
+//TODO make more readable
 static uint8_t utoa(uint16_t num, char *buffer)
 {
   constexpr char digit_pairs_reverse[] =
@@ -198,14 +199,14 @@ static uint8_t utoa(uint16_t num, char *buffer)
   {
     const uint16_t q = div100(num);
     const uint8_t r = num - mul100(q);
-    
-    *(uint16_t *)(tmp + len) = *(uint16_t *)(digit_pairs_reverse + (r << 1));
+
+    memcpy2(tmp + len, digit_pairs_reverse + (r << 1));
     num = q;
   }
 
   const bool is_single_digit = num < 10;
   len += is_single_digit;
-  *(uint16_t *)(tmp + len - is_single_digit) = *(uint16_t *)(digit_pairs_reverse + (num << 1));
+  memcpy2(tmp + len - is_single_digit, digit_pairs_reverse + (num << 1));
   len += 2 - is_single_digit;
 
   uint8_t i = len;

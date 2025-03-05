@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-11 12:37:26                                                 
-last edited: 2025-03-02 21:57:40                                                
+last edited: 2025-03-05 20:59:03                                                
 
 ================================================================================*/
 
@@ -70,12 +70,13 @@ uint16_t ff_deserialize(char *buffer, const uint16_t buffer_size, fix_message_t 
   const char *const buffer_start = buffer;
 
   bool valid = buffer_size >= STR_LEN("8=FIX.4.4\x019=0\x01""10=000\x01");
-  valid &= *(uint64_t *)buffer == *(uint64_t *)"8=FIX.4.";
-  valid &= *(uint32_t *)(buffer + 8) == *(uint32_t *)"4\x01""9=";
+  valid &= memcmp8(buffer, "8=FIX.4.4");
+  buffer += 8;
+  valid &= memcmp4(buffer, "4\x01""9=");
+  buffer += 4;
 
   if (UNLIKELY(!valid))
     return 0;  
-  buffer += STR_LEN("8=FIX.4.4\x01""9=");
 
   const uint16_t body_length = (uint16_t)atoui(buffer, (const char **)&buffer);
   if (UNLIKELY(*buffer++ != '\x01'))
@@ -232,7 +233,7 @@ static const char *get_checksum_start(const char *buffer, const uint16_t buffer_
 
 static inline bool check_zero_equal_soh(const char *buffer)
 {
-  return (*(uint16_t *)(buffer) == *(uint16_t *)"0=") & (buffer[5] == '\x01');
+  return memcmp2(buffer, "0=") & (buffer[5] == '\x01');
 }
 
 static bool tokenize(char *buffer, const char *const end, fix_message_t *const restrict message)
