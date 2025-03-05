@@ -5,7 +5,7 @@ Creator: Claudio Raimondi
 Email: claudio.raimondi@pm.me                                                   
 
 created at: 2025-02-14 17:53:51                                                 
-last edited: 2025-03-04 20:59:40                                                
+last edited: 2025-03-05 14:58:30                                                
 
 ================================================================================*/
 
@@ -239,7 +239,6 @@ static void deserialize(char **buffers)
     
     for (uint32_t j = 0; j < N_ITERATIONS; j++)
     {
-      bzero(buffer, BUFFER_SIZE);
       memcpy(buffer, buffers[i], BUFFER_SIZE);
 
       start = __rdtscp(&aux);
