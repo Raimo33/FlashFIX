@@ -13,7 +13,7 @@ To install FlashFIX you must compile it from source, as that will guarantee the 
 - Clone the repository: ```git clone https://github.com/Raimo33/FlashFIX.git``` or download the source code from the [release page](https://github.com/Raimo33/FlashFIX/releases)
 - Generate the build files: ```cmake .```
 - Build the library: ```cmake --build . --parallel```
-- Optionally install the library: ```cmake --install . --parallel```
+- Optionally install the library: ```cmake --install .```
 
 ## Testing
 
