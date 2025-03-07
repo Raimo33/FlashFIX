@@ -45,7 +45,7 @@
               </ul>
               <p class="caption"><span class="caption-text">Building and Testing</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Installation</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a>
     </li>
@@ -102,16 +102,17 @@
 <p>To install FlashFIX you must compile it from source, as that will guarantee the best performance.</p>
 <h2 id="requirements">Requirements</h2>
 <ul>
-<li>CMake 3.10 or later</li>
-<li>gcc with c23 support</li>
-<li>CPU with unaligned memory access support</li>
+<li>CMake 3.3 or later</li>
+<li>c23 compiler</li>
+<li>glibc</li>
+<li>CPU with misaligned memory access support</li>
 </ul>
 <h2 id="building">Building</h2>
 <ul>
 <li>Clone the repository: <code>git clone https://github.com/Raimo33/FlashFIX.git</code> or download the source code from the <a href="https://github.com/Raimo33/FlashFIX/releases">release page</a></li>
 <li>Generate the build files: <code>cmake .</code></li>
 <li>Build the library: <code>cmake --build . --parallel</code></li>
-<li>Optionally install the library: <code>cmake --install . --parallel</code></li>
+<li>Optionally install the library: <code>cmake --install .</code></li>
 </ul>
 <h2 id="testing">Testing</h2>
 <ul>

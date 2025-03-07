@@ -47,7 +47,7 @@
               <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Benchmarks</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Benchmarks</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#comments">Comments:</a>
     </li>
@@ -102,7 +102,7 @@
               
                 <h1 id="benchmarks">Benchmarks</h1>
 <p>The benchmarks are the result of 1 million iterations per test, with randomly generated tags and values following a gaussian distribution.
-Thy're are performed on the static library compiled following the <a href="../installation/">installation guide</a> and they measure time complexity in terms of clock cycles rather than seconds, draw your own conclusions according to your CPU clock-speed.</p>
+Thy're are performed on the static library compiled following the <a href="../installation/">installation guide</a> and they measure execution speed in terms of clock cycles rather than seconds, draw your own conclusions according to your CPU clock-speed.</p>
 <h3 id="comments">Comments:</h3>
 <ul>
 <li>The benchmarks were run using only aligned memory, mostly static, with exception for the actual random strings.</li>
@@ -111,9 +111,9 @@ Thy're are performed on the static library compiled following the <a href="../in
 <li>Direct zero-copy serialization with vectorized writev and no memcpy was attempted but resulted in a 3x performance decrease, likely due to the small nature of the FIX fields and tags.</li>
 </ul>
 <h2 id="deserialization">Deserialization</h2>
-<p><img alt="Deserialization" src="../../images/deserialize.png" /></p>
+<p><img alt="Deserialization" src="../../images/benchmarks/deserialize.png" /></p>
 <h2 id="serialization">Serialization</h2>
-<p><img alt="Serialization" src="../../images/serialize.png" /></p>
+<p><img alt="Serialization" src="../../images/benchmarks/serialize.png" /></p>
 <h2 id="run-your-own-benchmarks">Run your own benchmarks</h2>
 <p>To run your own benchmarks you can follow the steps below:</p>
 <ul>

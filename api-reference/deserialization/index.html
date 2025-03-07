@@ -56,7 +56,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../serialization/">Serialization</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Deserialization</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Deserialization</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#ff_deserialize">ff_deserialize</a>
         <ul>
@@ -132,17 +132,15 @@
 <ul>
 <li><code>buffer</code> - the buffer which contains the full serialized message</li>
 <li><code>buffer_size</code> - the size of the buffer in bytes</li>
-<li><code>message</code> - the message struct where to store the deserialized fields, with the following conditions:<ul>
+<li><code>message</code> - the message struct where to store the deserialized fields, with the following conditions:</li>
 <li><code>fields</code> already allocated with the maximum number of fields that you expect to receive</li>
 <li><code>field_count</code> set to the size of the <code>fields</code> array (i.e. the maximum number of fields that can be stored)</li>
 <li>everything else should be zeroed (<code>0</code>' or <code>NULL</code>)</li>
 </ul>
-</li>
-</ul>
 <h3 id="returns">Returns</h3>
 <ul>
 <li>length of the deserialized message in bytes</li>
-<li><code>0</code> in case of error (see below)</li>
+<li><code>0</code> in case of error (see <a href="#errors">Errors</a>)</li>
 </ul>
 <h3 id="undefined-behavior">Undefined Behavior</h3>
 <ul>
@@ -153,8 +151,6 @@
 <li><code>message-&gt;field_count</code> is different from the actual size of the <code>fields</code> array</li>
 <li><code>buffer_size</code> is different from the actual size of the buffer</li>
 <li><code>buffer</code> does not contain a full message</li>
-<li><code>buffer</code> does not contain a full message</li>
-<li><code>buffer</code> contains non printable characters</li>
 </ul>
 <h3 id="errors">Errors</h3>
 <ul>

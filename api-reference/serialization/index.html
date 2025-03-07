@@ -54,7 +54,7 @@
               <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../overview/">Overview</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Serialization</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Serialization</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#ff_serialize">ff_serialize</a>
         <ul>
@@ -142,7 +142,6 @@
 <li><code>message</code> doesn't fit in the buffer</li>
 <li>value_len and <code>tag_len</code> are different from the actual length of the value and tag</li>
 <li><code>field_count</code> is different from the actual number of fields in the message</li>
-<li>non printable characters</li>
 <li><code>message</code> with <code>NULL</code> fields</li>
 <li><code>message</code> with empty <code>{}</code> fields array</li>
 <li><code>message</code> with empty <code>""</code> field strings </li>
@@ -169,15 +168,9 @@
 <li><code>message</code> is <code>NULL</code></li>
 <li><code>message</code> doesn't fit in the buffer</li>
 <li><code>message-&gt;fields</code> is <code>NULL</code></li>
-<li><code>message-&gt;fields</code> is not allocated</li>
-<li>value_len and <code>tag_len</code> are different from the actual length of the value and tag</li>
+<li><code>value_len</code> or <code>tag_len</code> are different from the actual lengths of the strings</li>
+<li><code>value</code> or <code>tag</code> is <code>NULL</code></li>
 <li><code>field_count</code> is different from the actual number of fields in the message</li>
-<li>non printable characters</li>
-<li><code>message</code> with <code>NULL</code> fields</li>
-<li><code>message</code> with empty <code>{}</code> fields array</li>
-<li><code>message</code> with empty <code>""</code> field strings </li>
-<li><code>message</code> with <code>value_len == 0</code> or <code>tag_len == 0</code></li>
-<li><code>message</code> with <code>field_count == 0</code></li>
 </ul>
               
             </div>
