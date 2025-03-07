@@ -1,67 +1,70 @@
-cmake_minimum_required(VERSION 3.10)
-set(CMAKE_C_COMPILER gcc)
-project(flashfix LANGUAGES C VERSION 1.4.1)
+cmake_minimum_required(VERSION 3.5)
+project(flashfix VERSION 1.4.1 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 23)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)
-
-set(FLASHFIX_VERSION_MAJOR 1)
-set(FLASHFIX_VERSION_MINOR 4)
-set(FLASHFIX_VERSION_PATCH 1)
-set(FLASHFIX_VERSION "${FLASHFIX_VERSION_MAJOR}.${FLASHFIX_VERSION_MINOR}.${FLASHFIX_VERSION_PATCH}")
-
-set(FLASHFIX_SOURCES
-  src/deserializer.c
-  src/serializer.c
-  src/common.c
+set(COMMON_COMPILE_OPTIONS
+  -Wall
+  -Wextra
+  -Wpedantic
+  -O3
+  -march=native
+  -lto
 )
 
-set(FLASHFIX_PUBLIC_HEADERS
-  include/flashfix.h
-  include/deserializer.h
-  include/serializer.h
-  include/structs.h
-)
+set(COMMON_COMPILE_DEFINITIONS _GNU_SOURCE)
 
-set(FLASHFIX_COMPILE_OPTIONS
-  -Wall -Wextra -Werror -Wpedantic
-  -fwrapv -fno-strict-aliasing -Ofast -march=native -flto
-  -fno-semantic-interposition -fno-stack-protector -fno-plt 
-  -fno-asynchronous-unwind-tables -funroll-loops -fomit-frame-pointer
-)
+add_library(flashfix_shared SHARED)
+add_library(flashfix_static STATIC)
+add_library(flashfix ALIAS flashfix_shared)
 
-add_library(flashfix_shared SHARED ${FLASHFIX_SOURCES})
-set_target_properties(flashfix_shared PROPERTIES
-  VERSION ${FLASHFIX_VERSION}
-  SOVERSION ${FLASHFIX_VERSION_MAJOR}
-  OUTPUT_NAME flashfix
-)
-target_compile_options(flashfix_shared PUBLIC ${FLASHFIX_COMPILE_OPTIONS})
-target_include_directories(flashfix_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(flashfix_shared PUBLIC _GNU_SOURCE)
+foreach(TARGET flashfix_shared flashfix_static)
+  target_sources(${TARGET}
+    PRIVATE
+      src/deserializer.c
+      src/serializer.c
+      src/common.c
+    PUBLIC
+      FILE_SET HEADERS
+      BASE_DIRS include
+      FILES
+        include/flashfix.h
+        include/deserializer.h
+        include/serializer.h
+        include/structs.h
+  )
 
-add_library(flashfix_static STATIC ${FLASHFIX_SOURCES})
-set_target_properties(flashfix_static PROPERTIES OUTPUT_NAME flashfix)
-target_compile_options(flashfix_static PUBLIC ${FLASHFIX_COMPILE_OPTIONS})
-target_include_directories(flashfix_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(flashfix_static PUBLIC _GNU_SOURCE)
+  set_target_properties(${TARGET} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    OUTPUT_NAME flashfix
+    C_STANDARD 23
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF
+  )
+endforeach()
+
+add_executable(test tests/test.c)
+target_link_libraries(test PRIVATE flashfix_static)
+
+add_executable(benchmark benchmarks/benchmark.c)
+target_link_libraries(benchmark PRIVATE flashfix_static m)
+
+foreach(TARGET test benchmark)
+  set_target_properties(${TARGET} PROPERTIES
+    C_STANDARD 23
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF
+  )
+endforeach()
+
+foreach(TARGET flashfix_shared flashfix_static test benchmark)
+  target_compile_options(${TARGET} PRIVATE ${COMMON_COMPILE_OPTIONS})
+  target_compile_definitions(${TARGET} PRIVATE ${COMMON_COMPILE_DEFINITIONS})
+endforeach()
 
 install(TARGETS flashfix_shared flashfix_static
+  EXPORT flashfix-targets
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  FILE_SET HEADERS DESTINATION include/flashfix
 )
-
-install(FILES ${FLASHFIX_PUBLIC_HEADERS} DESTINATION include/flashfix)
-
-add_executable(test EXCLUDE_FROM_ALL tests/test.c)
-target_link_libraries(test flashfix_static)
-target_compile_options(test PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
-target_include_directories(test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(test PUBLIC _GNU_SOURCE)
-
-add_executable(benchmark EXCLUDE_FROM_ALL benchmarks/benchmark.c)
-target_link_libraries(benchmark flashfix_static m)
-target_compile_options(benchmark PUBLIC ${FLASHFIX_COMPILE_OPTIONS} -flto)
-target_include_directories(benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(benchmark PUBLIC _GNU_SOURCE)
